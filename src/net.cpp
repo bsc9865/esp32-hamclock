@@ -28,7 +28,21 @@ void net_begin() {
     configTzTime(TZ_INFO, NTP_SERVER1, NTP_SERVER2);  // SNTP neu anstossen
   }, ARDUINO_EVENT_WIFI_STA_GOT_IP);
 
+  WiFi.onEvent([](WiFiEvent_t, WiFiEventInfo_t info) {
+    Serial.printf("WLAN getrennt, Grund %d\n", info.wifi_sta_disconnected.reason);
+  }, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
+
   WiFi.mode(WIFI_STA);
+
+  // Diagnose: sichtbare Netze auflisten
+  int n = WiFi.scanNetworks();
+  Serial.printf("%d WLANs gefunden:\n", n);
+  for (int i = 0; i < n; i++)
+    Serial.printf("  %-32s Kanal %2d  %4d dBm  Verschl. %d%s\n", WiFi.SSID(i).c_str(),
+                  WiFi.channel(i), WiFi.RSSI(i), WiFi.encryptionType(i),
+                  WiFi.SSID(i) == WIFI_SSID ? "  <== Ziel" : "");
+  WiFi.scanDelete();
+
   WiFi.setHostname(HOSTNAME);
   WiFi.setAutoReconnect(true);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
