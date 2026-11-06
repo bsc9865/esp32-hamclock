@@ -5,7 +5,13 @@ Versionierung nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-11-06
+### Behoben
+- Kartenbilder (`assets/*.bin`) fehlten im Repository (durch `*.bin` in `.gitignore` ausgeschlossen); CI und Release-Build schlugen deshalb fehl
+
 ## [0.4.0] - 2026-11-06
+> Hinweis: Für v0.4.0 gibt es kein Release (Kartenbilder fehlten im Repo), siehe v0.4.1.
+
 ### Hinzugefügt
 - DX-Cluster-Client (Telnet, DXSpider): Standard dxspider.co.uk:7300, Login als RUFZEICHEN-7, automatische Neuverbindung mit Backoff
 - Spot-Liste in der rechten Spalte (Reiter „DX-Spots“): Bandfarbe, Frequenz, Rufzeichen, Alter; Antippen zeigt Land, CQ-Zone, Entfernung, Richtung, Mode, Spotter und Kommentar

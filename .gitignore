@@ -3,3 +3,4 @@
 include/secrets.h
 *.bin
 .DS_Store
+!assets/*.bin
