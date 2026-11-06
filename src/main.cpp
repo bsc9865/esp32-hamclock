@@ -17,7 +17,10 @@ void setup() {
   net_begin();
   datastore_begin();
   ui_build();
-  Serial.println("Setup fertig.");
+  Serial.printf("Setup fertig. Freier Speicher: intern %u KB (groesster Block %u KB), PSRAM %u KB\n",
+                heap_caps_get_free_size(MALLOC_CAP_INTERNAL) / 1024,
+                heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL) / 1024,
+                heap_caps_get_free_size(MALLOC_CAP_SPIRAM) / 1024);
 }
 
 void loop() {

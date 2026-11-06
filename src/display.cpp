@@ -15,8 +15,8 @@
 static esp_lcd_panel_handle_t panel;
 
 static constexpr int LCD_PCLK_HZ   = 16 * 1000 * 1000;
-static constexpr int BOUNCE_LINES  = 10;   // 800*480 muss durch 2*BOUNCE_LINES*800 teilbar sein
-static constexpr int LV_BUF_LINES  = 40;
+static constexpr int BOUNCE_LINES  = 20;   // 800*480 muss durch 2*BOUNCE_LINES*800 teilbar sein
+static constexpr int LV_BUF_LINES  = 20;
 
 static lv_disp_draw_buf_t draw_buf;
 

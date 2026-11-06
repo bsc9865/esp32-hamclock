@@ -17,6 +17,7 @@ Versionierung nach [SemVer](https://semver.org/lang/de/).
 - `scripts/gen_maps.py` erzeugt die Kartenbilder aus den NASA-Vorlagen
 ### Behoben
 - Springendes/verrutschendes Bild: Display-Treiber auf ESP-IDF `esp_lcd` mit Bounce-Buffern umgestellt; WLAN schreibt nicht mehr in den Flash
+- Pixelfehler am linken Bildrand: eigene ESP-IDF-Konfiguration (`custom_sdkconfig`): Code aus PSRAM (XIP), ISR-sicherer Display-Treiber, 64-KB-Daten-Cache mit 64-B-Zeilen, Bounce-Buffer 20 Zeilen
 ### Geändert
 - Plattform auf pioarduino (Arduino-Core 3.3 / ESP-IDF 5.5) umgestellt, LovyanGFX entfernt
 - Serielle Ausgabe über den UART-Port (CH343)
