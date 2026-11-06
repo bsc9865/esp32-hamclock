@@ -20,6 +20,7 @@ Legende: ✅ fertig · 🔨 in Arbeit · ⬜ geplant · 🟡 vereinfacht machbar
 - ✅ Flache Karte (äquidistant-zylindrisch) mit Greyline (Tag/Nacht-Terminator)
 - ✅ QTH-Marker, Subsolar-/Sublunarpunkt, Maidenhead-Gitter, Antippen → Locator/Entfernung/Richtung
 - ⬜ CQ/ITU-Zonen, Ländergrenzen
+- ✅ Vollbild-Karte mit Zoom (1–8×), Verschieben, Spot-Beschriftung
 - 🟡 Azimutale Karte zentriert auf QTH (vorberechnete Projektion)
 - ❌ 3D-Globus (WebGL)
 

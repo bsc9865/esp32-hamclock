@@ -4,6 +4,8 @@ Alle wichtigen Änderungen an diesem Projekt. Format nach [Keep a Changelog](htt
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unreleased]
+
+## [0.4.0] - 2026-11-06
 ### Hinzugefügt
 - DX-Cluster-Client (Telnet, DXSpider): Standard dxspider.co.uk:7300, Login als RUFZEICHEN-7, automatische Neuverbindung mit Backoff
 - Spot-Liste in der rechten Spalte (Reiter „DX-Spots“): Bandfarbe, Frequenz, Rufzeichen, Alter; Antippen zeigt Land, CQ-Zone, Entfernung, Richtung, Mode, Spotter und Kommentar
