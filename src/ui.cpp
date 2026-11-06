@@ -14,6 +14,7 @@
 #include "net.h"
 #include "astro.h"
 #include "datastore.h"
+#include "worldmap.h"
 
 // ---------- Farben ----------
 #define C_BG      lv_color_hex(0x0A0E14)
@@ -142,10 +143,7 @@ static void build_bands(lv_obj_t *scr) {
 }
 
 static void build_map(lv_obj_t *scr) {
-  lv_obj_t *p = pane(scr, 6, 192, 560, 282, nullptr);
-  lv_obj_set_style_pad_all(p, 0, 0);
-  lv_obj_t *l = label(p, &lv_font_montserrat_16, C_DIM, 0, 0, "Weltkarte mit Greyline folgt (Phase 2)");
-  lv_obj_center(l);
+  worldmap_create(scr, 6, 194, qth.lat, qth.lon);
 }
 
 static void build_info(lv_obj_t *scr) {
@@ -261,6 +259,17 @@ static void update_solar() {
 
 static void timer_fast(lv_timer_t *) { update_clock(); }
 
+// Karte jede Minute neu berechnen (sobald die Uhrzeit gueltig ist)
+static void timer_map(lv_timer_t *) {
+  static time_t last = 0;
+  if (!time_valid()) return;
+  time_t now = time(nullptr);
+  if (now - last >= 60) {
+    last = now;
+    worldmap_render(now);
+  }
+}
+
 static void timer_slow(lv_timer_t *) {
   static uint32_t seen_seq = 0;
   update_status();
@@ -288,6 +297,7 @@ void ui_build() {
 
   lv_timer_create(timer_fast, 200, nullptr);
   lv_timer_create(timer_slow, 2000, nullptr);
+  lv_timer_create(timer_map, 1000, nullptr);
   timer_fast(nullptr);
   timer_slow(nullptr);
 }

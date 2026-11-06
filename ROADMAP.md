@@ -17,8 +17,9 @@ Legende: ✅ fertig · 🔨 in Arbeit · ⬜ geplant · 🟡 vereinfacht machbar
 - ✅ Sonnenauf- und -untergang am QTH, Mondphase
 
 ## Phase 2: Weltkarte
-- ⬜ Flache Karte (äquidistant-zylindrisch) mit Greyline (Tag/Nacht-Terminator)
-- ⬜ QTH-Marker, Subsolarpunkt, Maidenhead-Gitter, CQ/ITU-Zonen
+- ✅ Flache Karte (äquidistant-zylindrisch) mit Greyline (Tag/Nacht-Terminator)
+- ✅ QTH-Marker, Subsolar-/Sublunarpunkt, Maidenhead-Gitter, Antippen → Locator/Entfernung/Richtung
+- ⬜ CQ/ITU-Zonen, Ländergrenzen
 - 🟡 Azimutale Karte zentriert auf QTH (vorberechnete Projektion)
 - ❌ 3D-Globus (WebGL)
 

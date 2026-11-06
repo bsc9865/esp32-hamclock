@@ -28,6 +28,12 @@ jobs:
             .pio/libdeps
           key: pio-${{ hashFiles('platformio.ini') }}
 
+      - name: Host-Tests (Astronomie, Geo, Karten-Rendering)
+        run: |
+          c++ -std=c++17 -Isrc test/host/test_astro.cpp src/astro.cpp -o test_astro && ./test_astro
+          c++ -O2 -std=c++17 -x c++ -Isrc test/host/render_map.cpp src/map_render.cpp src/astro.cpp src/maps/map_day.c src/maps/map_night.c -o render_map
+          ./render_map 1781964000 karte.raw
+
       - name: PlatformIO installieren
         run: pip install platformio
 

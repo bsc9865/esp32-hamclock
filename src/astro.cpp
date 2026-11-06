@@ -103,3 +103,43 @@ const char *moon_phase_name(double age) {
   int i = (int)floor(age / 29.530588853 * 8.0 + 0.5) % 8;
   return names[i];
 }
+
+MoonPos moon_position(time_t t) {
+  double n = t / 86400.0 + 2440587.5 - 2451545.0;
+  double L = norm360(218.316 + 13.176396 * n);
+  double M = norm360(134.963 + 13.064993 * n) * DEG;
+  double F = norm360(93.272 + 13.229350 * n) * DEG;
+  double lam = (L + 6.289 * sin(M)) * DEG;   // ekliptikale Laenge
+  double bet = 5.128 * sin(F) * DEG;          // ekliptikale Breite
+  double eps = (23.439 - 0.0000004 * n) * DEG;
+  double ra = atan2(sin(lam) * cos(eps) - tan(bet) * sin(eps), cos(lam));
+  double dec = asin(sin(bet) * cos(eps) + cos(bet) * sin(eps) * sin(lam));
+  double gmst = norm360(280.46061837 + 360.98564736629 * n);
+  return {dec / DEG, norm180(ra / DEG - gmst)};
+}
+
+void latlon_to_maidenhead(double lat, double lon, char out[7]) {
+  double x = norm360(lon + 180.0), y = lat + 90.0;
+  if (y < 0) y = 0;
+  if (y >= 180) y = 179.9999;
+  out[0] = 'A' + (int)(x / 20);
+  out[1] = 'A' + (int)(y / 10);
+  out[2] = '0' + (int)(fmod(x, 20) / 2);
+  out[3] = '0' + (int)fmod(y, 10);
+  out[4] = 'a' + (int)(fmod(x, 2) * 12);
+  out[5] = 'a' + (int)(fmod(y, 1) * 24);
+  out[6] = 0;
+}
+
+double gc_distance_km(double lat1, double lon1, double lat2, double lon2) {
+  double p1 = lat1 * DEG, p2 = lat2 * DEG, dl = (lon2 - lon1) * DEG;
+  double c = sin(p1) * sin(p2) + cos(p1) * cos(p2) * cos(dl);
+  if (c > 1) c = 1;
+  if (c < -1) c = -1;
+  return acos(c) * 6371.0;
+}
+
+double gc_bearing_deg(double lat1, double lon1, double lat2, double lon2) {
+  double p1 = lat1 * DEG, p2 = lat2 * DEG, dl = (lon2 - lon1) * DEG;
+  return norm360(atan2(sin(dl) * cos(p2), cos(p1) * sin(p2) - sin(p1) * cos(p2) * cos(dl)) / DEG);
+}

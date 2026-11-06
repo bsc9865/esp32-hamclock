@@ -10,6 +10,11 @@ Versionierung nach [SemVer](https://semver.org/lang/de/).
 - Solardaten und Bandbedingungen von hamqsl.com (N0NBH): SFI, SSN, A, K, X-Ray, Bz, Sonnenwind, VHF/Es
 - Sonnenauf- und -untergang, Sonnenhöhe und -azimut am QTH, Mondphase
 - Abruf-Task auf Core 0 mit Wiederholung bei Fehlern
+- Weltkarte 560×280: NASA Blue Marble (Tag) und Black Marble (Nacht), überblendet entlang der Tag/Nacht-Grenze mit Dämmerungszone (−12° bis +3°)
+- Maidenhead-Feldgitter, Subsolarpunkt (Sonne), Sublunarpunkt (Mond) und QTH-Marker auf der Karte
+- Antippen der Karte zeigt Locator, Koordinaten, Entfernung und Richtung vom QTH
+- Host-Tests für Astronomie und Geo-Rechnungen, laufen in der CI mit
+- `scripts/gen_maps.py` erzeugt die Kartenbilder aus den NASA-Vorlagen
 ### Geändert
 - Code in Module aufgeteilt (display, net, astro, solar, datastore, ui), C++17
 
