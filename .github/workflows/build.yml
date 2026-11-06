@@ -33,6 +33,8 @@ jobs:
           c++ -std=c++17 -Isrc test/host/test_astro.cpp src/astro.cpp -o test_astro && ./test_astro
           c++ -O2 -std=c++17 -x c++ -Isrc test/host/render_map.cpp src/map_render.cpp src/astro.cpp src/maps/map_day.c src/maps/map_night.c -o render_map
           ./render_map 1781964000 karte.raw
+          cc -c src/data/cty_data.c -o cty_data.o
+          c++ -std=c++17 -Isrc test/host/test_cty.cpp src/cty.cpp cty_data.o -o test_cty && ./test_cty
 
       - name: PlatformIO installieren
         run: pip install platformio esptool
