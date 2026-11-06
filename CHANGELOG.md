@@ -4,6 +4,8 @@ Alle wichtigen Änderungen an diesem Projekt. Format nach [Keep a Changelog](htt
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unreleased]
+
+## [0.5.0] - 2026-11-06
 ### Hinzugefügt
 - Aktivierungen: POTA (api.pota.app) und WWFF (spots.wwff.co), Abruf alle 2 Minuten, Anzeige der letzten 60 Minuten
 - Reiter „Aktiv“: Typ (P/W), Frequenz, Rufzeichen, Referenz; Antippen zeigt Park-/Gebietsname, Mode, Region, Entfernung, Richtung, Kommentar
