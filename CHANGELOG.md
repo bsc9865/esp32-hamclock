@@ -4,6 +4,14 @@ Alle wichtigen Änderungen an diesem Projekt. Format nach [Keep a Changelog](htt
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unreleased]
+### Hinzugefügt
+- Dashboard-Layout für 800×480: Kopfzeile, Uhr, Sonnendaten, HF-Bedingungen, Platz für die Karte, Infospalte
+- WLAN-Verbindung (Zugangsdaten in `include/secrets.h`), NTP-Zeit, UTC und MEZ/MESZ
+- Solardaten und Bandbedingungen von hamqsl.com (N0NBH): SFI, SSN, A, K, X-Ray, Bz, Sonnenwind, VHF/Es
+- Sonnenauf- und -untergang, Sonnenhöhe und -azimut am QTH, Mondphase
+- Abruf-Task auf Core 0 mit Wiederholung bei Fehlern
+### Geändert
+- Code in Module aufgeteilt (display, net, astro, solar, datastore, ui), C++17
 
 ## [0.1.0] - 2026-11-06
 ### Hinzugefügt

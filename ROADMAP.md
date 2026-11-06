@@ -11,10 +11,10 @@ Legende: ✅ fertig · 🔨 in Arbeit · ⬜ geplant · 🟡 vereinfacht machbar
 - ✅ Git-Versionierung, GitHub Actions (Firmware-Releases)
 
 ## Phase 1: Uhr und Weltraumwetter
-- ⬜ WLAN, NTP, UTC und Ortszeit (MEZ/MESZ), Datum
-- ⬜ Solardaten: SFI, SSN, A, K, Sonnenwind, Bz, X-Ray (hamqsl.com / NOAA SWPC)
-- ⬜ Bandbedingungen HF Tag/Nacht, VHF (N0NBH / hamqsl.com)
-- ⬜ Sonnenauf- und -untergang am QTH, Mondphase
+- ✅ WLAN, NTP, UTC und Ortszeit (MEZ/MESZ), Datum
+- ✅ Solardaten: SFI, SSN, A, K, Sonnenwind, Bz, X-Ray (hamqsl.com / NOAA SWPC)
+- ✅ Bandbedingungen HF Tag/Nacht, VHF (N0NBH / hamqsl.com)
+- ✅ Sonnenauf- und -untergang am QTH, Mondphase
 
 ## Phase 2: Weltkarte
 - ⬜ Flache Karte (äquidistant-zylindrisch) mit Greyline (Tag/Nacht-Terminator)
