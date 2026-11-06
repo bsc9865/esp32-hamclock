@@ -92,7 +92,7 @@ static lv_obj_t *l_status;
 static lv_obj_t *l_utc, *l_local, *l_date;
 static lv_obj_t *l_sfi, *l_ssn, *l_a, *l_k, *l_xray, *l_wind, *l_bz, *l_geo;
 static lv_obj_t *l_hf[4][2];
-static lv_obj_t *l_rise, *l_set, *l_sunalt, *l_moon, *l_aurora, *l_es6, *l_es4, *l_es2, *l_stand;
+static lv_obj_t *l_rise, *l_set, *l_sunalt, *l_moon, *l_aurora, *l_es6, *l_es4, *l_es2, *l_stand, *l_mem;
 
 static void build_header(lv_obj_t *scr) {
   label(scr, &lv_font_montserrat_28, C_CALL, 10, 6, CALLSIGN);
@@ -169,7 +169,8 @@ static void build_info(lv_obj_t *scr) {
   label(p, &lv_font_montserrat_14, C_DIM, 0, 202, "Es EU 2m");
   l_es2 = label(p, &lv_font_montserrat_14, C_TEXT, 90, 202, "--");
 
-  l_stand = label(p, &lv_font_montserrat_12, C_DIM, 0, 248, "Daten: --");
+  l_stand = label(p, &lv_font_montserrat_12, C_DIM, 0, 230, "Daten: --");
+  l_mem = label(p, &lv_font_montserrat_12, C_DIM, 0, 248, "");
 }
 
 // ---------- Aktualisierung ----------
@@ -270,9 +271,27 @@ static void timer_map(lv_timer_t *) {
   }
 }
 
+// Speicher-Ueberwachung: Anzeige + alle 5 Minuten eine Zeile auf Serial
+static void update_mem() {
+  uint32_t fi = heap_caps_get_free_size(MALLOC_CAP_INTERNAL) / 1024;
+  uint32_t mi = heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL) / 1024;
+  uint32_t fp = heap_caps_get_free_size(MALLOC_CAP_SPIRAM) / 1024;
+  uint32_t up = millis() / 60000;
+  set_text(l_mem, "RAM %lu K (min %lu)  PSRAM %lu K  %luh%02lu",
+           fi, mi, fp, up / 60, up % 60);
+  lv_obj_set_style_text_color(l_mem, mi < 30 ? C_POOR : mi < 60 ? C_FAIR : C_DIM, 0);
+  static uint32_t last_log = 0;
+  if (millis() - last_log >= 5 * 60000UL || last_log == 0) {
+    last_log = millis();
+    Serial.printf("[Status] Laufzeit %lu min, intern frei %lu KB (min %lu, Block %u), PSRAM frei %lu KB\n",
+                  up, fi, mi, heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL) / 1024, fp);
+  }
+}
+
 static void timer_slow(lv_timer_t *) {
   static uint32_t seen_seq = 0;
   update_status();
+  update_mem();
   update_sun_moon();
   if (solar_seq() != seen_seq) {
     seen_seq = solar_seq();

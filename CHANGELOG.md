@@ -4,6 +4,12 @@ Alle wichtigen Änderungen an diesem Projekt. Format nach [Keep a Changelog](htt
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unreleased]
+### Geändert
+- LVGL-Speicher (Widgets, Styles, Texte) kommt aus dem PSRAM statt aus dem internen RAM
+- TLS (mbedTLS) und WLAN/lwIP-Puffer dürfen den PSRAM nutzen: intern frei nach dem Start 60 → 81 KB
+- Anzeige von freiem RAM, Tiefststand und Laufzeit in der Infospalte, Statuszeile alle 5 Minuten auf Serial
+### Behoben
+- Absturz in lwIP („Required to lock TCPIP core“) durch einen Wettlauf zwischen SNTP-DNS-Anfrage und dem DNS-Cache-Leeren im Arduino-Core: SNTP startet jetzt erst nach der ersten eigenen Namensauflösung, Datenabrufe erst mit gültiger Uhrzeit
 
 ## [0.2.0] - 2026-11-06
 ### Hinzugefügt

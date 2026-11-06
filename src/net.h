@@ -1,7 +1,8 @@
 #pragma once
 #include <Arduino.h>
 
-void net_begin();               // WLAN + NTP starten
+void net_begin();               // WLAN starten
+void net_poll();                // aus dem Daten-Task: startet SNTP nach dem ersten Connect
 bool net_configured();          // WLAN-Zugangsdaten vorhanden?
 bool net_connected();
 String net_ip();

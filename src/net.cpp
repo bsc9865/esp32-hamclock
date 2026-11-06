@@ -18,14 +18,15 @@ bool net_configured() {
 }
 
 void net_begin() {
-  configTzTime(TZ_INFO, NTP_SERVER1, NTP_SERVER2);
+  // Zeitzone sofort setzen; SNTP startet erst in net_poll() (siehe dort)
+  setenv("TZ", TZ_INFO, 1);
+  tzset();
   if (!net_configured()) {
     Serial.println("WLAN nicht konfiguriert (include/secrets.h)");
     return;
   }
   WiFi.onEvent([](WiFiEvent_t, WiFiEventInfo_t) {
     Serial.printf("WLAN verbunden, IP %s\n", WiFi.localIP().toString().c_str());
-    configTzTime(TZ_INFO, NTP_SERVER1, NTP_SERVER2);  // SNTP neu anstossen
   }, ARDUINO_EVENT_WIFI_STA_GOT_IP);
 
   WiFi.onEvent([](WiFiEvent_t, WiFiEventInfo_t info) {
@@ -48,6 +49,21 @@ void net_begin() {
   WiFi.setAutoReconnect(true);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.printf("Verbinde mit WLAN '%s' ...\n", WIFI_SSID);
+}
+
+// Wird aus dem Daten-Task aufgerufen.
+// Reihenfolge ist wichtig: Der Arduino-Core leert beim ersten hostByName() nach
+// einer IP-Aenderung den lwIP-DNS-Cache ohne TCPIP-Lock. Laeuft dabei gerade eine
+// DNS-Anfrage von SNTP, stuerzt lwIP ab (assert "Required to lock TCPIP core").
+// Deshalb: zuerst einmal selbst aufloesen, danach SNTP starten.
+void net_poll() {
+  static bool sntp_started = false;
+  if (sntp_started || !net_connected()) return;
+  IPAddress ip;
+  WiFi.hostByName(NTP_SERVER1, ip);
+  configTzTime(TZ_INFO, NTP_SERVER1, NTP_SERVER2);
+  sntp_started = true;
+  Serial.printf("SNTP gestartet (%s = %s)\n", NTP_SERVER1, ip.toString().c_str());
 }
 
 bool net_connected() { return WiFi.status() == WL_CONNECTED; }

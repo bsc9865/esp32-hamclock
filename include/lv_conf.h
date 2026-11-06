@@ -8,12 +8,12 @@
 #define LV_COLOR_DEPTH 16
 #define LV_COLOR_16_SWAP 0
 
-// Speicher ueber malloc (grosse Bloecke landen automatisch im PSRAM)
+// Speicher fuer Widgets/Styles komplett aus dem PSRAM (siehe lv_mem_psram.h)
 #define LV_MEM_CUSTOM 1
-#define LV_MEM_CUSTOM_INCLUDE <stdlib.h>
-#define LV_MEM_CUSTOM_ALLOC   malloc
-#define LV_MEM_CUSTOM_FREE    free
-#define LV_MEM_CUSTOM_REALLOC realloc
+#define LV_MEM_CUSTOM_INCLUDE "lv_mem_psram.h"
+#define LV_MEM_CUSTOM_ALLOC   lv_psram_malloc
+#define LV_MEM_CUSTOM_FREE    lv_psram_free
+#define LV_MEM_CUSTOM_REALLOC lv_psram_realloc
 
 // Zeitbasis ueber Arduino millis()
 #define LV_TICK_CUSTOM 1
