@@ -4,6 +4,13 @@ Alle wichtigen Änderungen an diesem Projekt. Format nach [Keep a Changelog](htt
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unreleased]
+### Hinzugefügt
+- Einstellungsseite am Gerät (Zahnrad oben rechts): WLAN-Suche mit Netzliste, Passwort per Bildschirmtastatur, Rufzeichen und Locator
+- Einstellungen im NVS: bleiben bei Firmware-Updates erhalten; Speichern startet das Gerät neu
+- Ersteinrichtung: ohne WLAN öffnet sich die Einstellungsseite automatisch und sucht Netze
+### Geändert
+- `include/secrets.h` ist optional: falls vorhanden, werden die WLAN-Daten beim ersten Start einmalig ins NVS übernommen
+- Release-Firmware ist damit ohne Entwicklungsumgebung nutzbar
 
 ## [0.2.1] - 2026-11-06
 ### Geändert

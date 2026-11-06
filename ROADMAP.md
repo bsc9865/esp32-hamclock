@@ -46,7 +46,8 @@ Legende: ✅ fertig · 🔨 in Arbeit · ⬜ geplant · 🟡 vereinfacht machbar
 - ❌ Volle ITU-R-P.533-Berechnung (WebAssembly, zu rechenintensiv)
 
 ## Phase 8: Station
-- ⬜ Einstellungen am Touchscreen (Rufzeichen, Locator, WLAN, Themes), gespeichert im NVS
+- ✅ Einstellungen am Touchscreen (WLAN-Suche, Passwort, Rufzeichen, Locator), gespeichert im NVS
+- ⬜ Weitere Einstellungen: Themes, Einheiten, Zeitzone, DX-Cluster-Server
 - ⬜ Web-Konfigurationsseite und OTA-Update über WLAN
 - ⬜ WSJT-X-Decodes über UDP im LAN
 - 🟡 PSKReporter (MQTT)

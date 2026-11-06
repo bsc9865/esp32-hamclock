@@ -24,7 +24,7 @@ Den geplanten Funktionsumfang und den aktuellen Stand zeigt die [ROADMAP.md](ROA
 brew install python@3.13
 python3.13 -m venv ~/.local/share/pio-venv && ~/.local/share/pio-venv/bin/pip install platformio
 ln -s ~/.local/share/pio-venv/bin/pio ~/.local/bin/pio
-cp include/secrets.h.example include/secrets.h   # WLAN-Daten eintragen
+cp include/secrets.h.example include/secrets.h   # optional: WLAN vorbelegen
 pio run -t upload        # bauen und flashen
 pio device monitor       # serielle Ausgabe
 ```
@@ -38,6 +38,8 @@ Jedes getaggte Release (`vX.Y.Z`) wird von GitHub Actions gebaut. Unter *Release
 ```bash
 esptool --chip esp32s3 write-flash 0x0 esp32-hamclock-factory.bin
 ```
+
+Beim ersten Start öffnet sich die Einstellungsseite: WLAN auswählen, Passwort, Rufzeichen und Locator eingeben, speichern. Später erreichst du sie über das Zahnrad oben rechts.
 
 ## Projektstruktur
 

@@ -15,18 +15,10 @@
 #include "astro.h"
 #include "datastore.h"
 #include "worldmap.h"
+#include "settings.h"
+#include "settings_ui.h"
 
-// ---------- Farben ----------
-#define C_BG      lv_color_hex(0x0A0E14)
-#define C_PANE    lv_color_hex(0x131A24)
-#define C_BORDER  lv_color_hex(0x263142)
-#define C_ACCENT  lv_color_hex(0x38BDF8)
-#define C_TEXT    lv_color_hex(0xE6EDF3)
-#define C_DIM     lv_color_hex(0x7D8B9C)
-#define C_GOOD    lv_color_hex(0x22C55E)
-#define C_FAIR    lv_color_hex(0xEAB308)
-#define C_POOR    lv_color_hex(0xEF4444)
-#define C_CALL    lv_color_hex(0xFBBF24)
+#include "ui_theme.h"
 
 static LatLon qth;
 
@@ -94,13 +86,31 @@ static lv_obj_t *l_sfi, *l_ssn, *l_a, *l_k, *l_xray, *l_wind, *l_bz, *l_geo;
 static lv_obj_t *l_hf[4][2];
 static lv_obj_t *l_rise, *l_set, *l_sunalt, *l_moon, *l_aurora, *l_es6, *l_es4, *l_es2, *l_stand, *l_mem;
 
+static void open_settings(lv_event_t *) { settings_ui_open(); }
+
 static void build_header(lv_obj_t *scr) {
-  label(scr, &lv_font_montserrat_28, C_CALL, 10, 6, CALLSIGN);
-  label(scr, &lv_font_montserrat_16, C_DIM, 130, 14, LOCATOR);
+  lv_obj_t *call = label(scr, &lv_font_montserrat_28, C_CALL, 10, 6, g_settings.call);
+  lv_obj_update_layout(call);
+  label(scr, &lv_font_montserrat_16, C_DIM, 22 + lv_obj_get_width(call), 14, g_settings.loc);
   l_status = label(scr, &lv_font_montserrat_14, C_DIM, 0, 14);
-  lv_obj_set_width(l_status, 520);
+  lv_obj_set_width(l_status, 470);
   lv_obj_set_style_text_align(l_status, LV_TEXT_ALIGN_RIGHT, 0);
   lv_obj_set_pos(l_status, 270, 14);
+
+  // Zahnrad: Einstellungen
+  lv_obj_t *b = lv_btn_create(scr);
+  lv_obj_set_size(b, 46, 36);
+  lv_obj_set_pos(b, 748, 4);
+  lv_obj_set_style_bg_color(b, C_PANE, 0);
+  lv_obj_set_style_border_color(b, C_BORDER, 0);
+  lv_obj_set_style_border_width(b, 1, 0);
+  lv_obj_set_style_shadow_width(b, 0, 0);
+  lv_obj_set_ext_click_area(b, 8);
+  lv_obj_add_event_cb(b, open_settings, LV_EVENT_CLICKED, nullptr);
+  lv_obj_t *l = lv_label_create(b);
+  lv_label_set_text(l, LV_SYMBOL_SETTINGS);
+  lv_obj_set_style_text_color(l, C_TEXT, 0);
+  lv_obj_center(l);
 }
 
 static void build_clock(lv_obj_t *scr) {
@@ -147,7 +157,9 @@ static void build_map(lv_obj_t *scr) {
 }
 
 static void build_info(lv_obj_t *scr) {
-  lv_obj_t *p = pane(scr, 570, 192, 224, 282, "Sonne & Mond @ " LOCATOR);
+  char title[40];
+  snprintf(title, sizeof title, "Sonne & Mond @ %s", g_settings.loc);
+  lv_obj_t *p = pane(scr, 570, 192, 224, 282, title);
   const lv_font_t *f = &lv_font_montserrat_16;
   label(p, f, C_DIM, 0, 22, LV_SYMBOL_UP " Aufg.");
   l_rise = label(p, f, C_TEXT, 90, 22, "--:--");
@@ -196,7 +208,7 @@ static void update_clock() {
 
 static void update_status() {
   if (!net_configured())
-    set_text(l_status, LV_SYMBOL_WARNING " WLAN nicht konfiguriert   " FW_VERSION);
+    set_text(l_status, LV_SYMBOL_WARNING " WLAN nicht eingerichtet   " FW_VERSION);
   else if (net_connected())
     set_text(l_status, LV_SYMBOL_WIFI " %s  %d dBm   %s", net_ip().c_str(), net_rssi(), FW_VERSION);
   else
@@ -300,8 +312,8 @@ static void timer_slow(lv_timer_t *) {
 }
 
 void ui_build() {
-  maidenhead_to_latlon(LOCATOR, qth);
-  Serial.printf("QTH %s: %.4f N, %.4f E\n", LOCATOR, qth.lat, qth.lon);
+  maidenhead_to_latlon(g_settings.loc, qth);
+  Serial.printf("QTH %s: %.4f N, %.4f E\n", g_settings.loc, qth.lat, qth.lon);
 
   lv_obj_t *scr = lv_scr_act();
   lv_obj_set_style_bg_color(scr, C_BG, 0);
@@ -319,4 +331,6 @@ void ui_build() {
   lv_timer_create(timer_map, 1000, nullptr);
   timer_fast(nullptr);
   timer_slow(nullptr);
+
+  if (!settings_wifi_configured()) settings_ui_open();   // Ersteinrichtung
 }

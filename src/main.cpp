@@ -6,6 +6,7 @@
 #include "net.h"
 #include "datastore.h"
 #include "ui.h"
+#include "settings.h"
 
 void setup() {
   Serial.begin(115200);
@@ -13,6 +14,7 @@ void setup() {
   Serial.println("\n=== ESP32-HamClock " FW_VERSION " ===");
   Serial.printf("PSRAM: %lu KB\n", ESP.getPsramSize() / 1024);
 
+  settings_load();
   display_init();
   net_begin();
   datastore_begin();
