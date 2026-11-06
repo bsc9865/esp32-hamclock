@@ -18,9 +18,12 @@ void map_view_to_xy(const MapView &v, double lat, double lon, double &x, double 
 void map_view_to_latlon(const MapView &v, double x, double y, double &lat, double &lon);
 
 // DX-Station fuer die Karte
+enum MapShape : uint8_t { SHAPE_DX = 0, SHAPE_SQUARE = 1, SHAPE_DIAMOND = 2 };
+
 struct MapSpot {
   float lat, lon;
   uint32_t color;    // 0xRRGGBB
+  uint8_t shape;     // SHAPE_DX: Punkt mit Grosskreis-Pfad; sonst Marker ohne Pfad
 };
 
 // Rendert Tag/Nacht-Karte, Gitter, Spots (Grosskreis-Pfade) und Marker in buf (v.w x v.h, RGB565)

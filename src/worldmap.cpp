@@ -12,7 +12,7 @@ static lv_timer_t *info_timer;
 static double qlat, qlon;
 static constexpr int DASH_W = 560, DASH_H = 280;
 static MapView view = map_view_world(DASH_W, DASH_H);
-static constexpr int MAX_MAP_SPOTS = 60;
+static constexpr int MAX_MAP_SPOTS = 100;
 static MapSpot *map_spots;
 static int n_map_spots = 0;
 

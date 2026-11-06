@@ -32,7 +32,9 @@ Legende: ✅ fertig · 🔨 in Arbeit · ⬜ geplant · 🟡 vereinfacht machbar
 - 🟡 RBN-Spots
 
 ## Phase 4: Aktivierungen
-- ⬜ POTA, SOTA, WWFF (WWBOTA) als Liste und Kartenmarker
+- ✅ POTA und WWFF als Liste und Kartenmarker
+- ⏸ SOTA: API-Nutzung für KI-generierte Software nur mit Genehmigung (SOTA-Reflector, Gruppe „API-consumers“)
+- ⬜ WWBOTA
 
 ## Phase 5: Weltraumwetter erweitert
 - ⬜ Kp-, SFI- und X-Ray-Verlaufsdiagramme, SWPC-Alarme

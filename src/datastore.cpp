@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #include "net.h"
 #include "config.h"
+#include "activations.h"
 
 static SemaphoreHandle_t mtx;
 static SolarData g_solar;
@@ -35,6 +36,8 @@ static bool job_solar() {
 
 static Job jobs[] = {
   {job_solar, SOLAR_REFRESH_S, 0},
+  {activations_fetch_pota, ACT_REFRESH_S, 0},
+  {activations_fetch_wwff, ACT_REFRESH_S, 0},
 };
 
 static void data_task(void *) {
@@ -55,5 +58,6 @@ static void data_task(void *) {
 
 void datastore_begin() {
   mtx = xSemaphoreCreateMutex();
+  activations_begin();
   xTaskCreatePinnedToCore(data_task, "data", 12288, nullptr, 1, nullptr, 0);
 }

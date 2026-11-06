@@ -22,6 +22,12 @@
 #define DX_MAX_SPOTS       200
 #define DX_RETENTION_S     (30 * 60)
 
+// Aktivierungen (POTA, WWFF)
+#define URL_POTA_SPOTS     "https://api.pota.app/spot/activator"
+#define URL_WWFF_SPOTS     "https://spots.wwff.co/static/spots.json"
+#define ACT_REFRESH_S      120
+#define ACT_RETENTION_S    (60 * 60)
+
 #ifndef FW_VERSION
 #define FW_VERSION "dev"
 #endif

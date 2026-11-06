@@ -232,15 +232,30 @@ static void great_circle(double lat1, double lon1, double lat2, double lon2, uin
   }
 }
 
+static void square(int cx, int cy, int r, uint16_t c) {
+  for (int dy = -r; dy <= r; dy++)
+    for (int dx = -r; dx <= r; dx++) px(cx + dx, cy + dy, c);
+}
+
+static void diamond(int cx, int cy, int r, uint16_t c) {
+  for (int dy = -r; dy <= r; dy++)
+    for (int dx = -r; dx <= r; dx++)
+      if (abs(dx) + abs(dy) <= r) px(cx + dx, cy + dy, c);
+}
+
 static void render_spots(const MapSpot *sp, int n) {
   int r = V.dpp < 0.2 ? 5 : 3;
   for (int i = n - 1; i >= 0; i--)   // aelteste zuerst, neueste oben
-    great_circle(qlat, qlon, sp[i].lat, sp[i].lon, hex565(sp[i].color));
+    if (sp[i].shape == SHAPE_DX) great_circle(qlat, qlon, sp[i].lat, sp[i].lon, hex565(sp[i].color));
   for (int i = n - 1; i >= 0; i--) {
     int x, y;
     to_px(sp[i].lat, sp[i].lon, x, y);
-    disc(x, y, r + 1, rgb(0, 0, 0));
-    disc(x, y, r, hex565(sp[i].color));
+    uint16_t c = hex565(sp[i].color), k = rgb(0, 0, 0);
+    switch (sp[i].shape) {
+      case SHAPE_SQUARE:  square(x, y, r, k);  square(x, y, r - 1, c); break;
+      case SHAPE_DIAMOND: diamond(x, y, r + 2, k); diamond(x, y, r + 1, c); break;
+      default:            disc(x, y, r + 1, k); disc(x, y, r, c); break;
+    }
   }
 }
 

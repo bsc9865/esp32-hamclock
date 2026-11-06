@@ -18,6 +18,8 @@
 #include "settings.h"
 #include "settings_ui.h"
 #include "dxpanel.h"
+#include "actpanel.h"
+#include "map_render.h"
 
 #include "ui_theme.h"
 
@@ -158,10 +160,11 @@ static void build_map(lv_obj_t *scr) {
 }
 
 // Rechte Spalte mit zwei Reitern: DX-Spots | Sonne/Mond
-static lv_obj_t *tab_btn[2], *tab_pane[2];
+static constexpr int TABS = 3;
+static lv_obj_t *tab_btn[TABS], *tab_pane[TABS];
 
 static void select_tab(int i) {
-  for (int k = 0; k < 2; k++) {
+  for (int k = 0; k < TABS; k++) {
     if (k == i) {
       lv_obj_clear_flag(tab_pane[k], LV_OBJ_FLAG_HIDDEN);
       lv_obj_add_state(tab_btn[k], LV_STATE_CHECKED);
@@ -175,11 +178,11 @@ static void select_tab(int i) {
 static void tab_clicked(lv_event_t *e) { select_tab((int)(intptr_t)lv_event_get_user_data(e)); }
 
 static void build_info(lv_obj_t *scr) {
-  static const char *names[2] = {"DX-Spots", "Sonne/Mond"};
-  for (int i = 0; i < 2; i++) {
+  static const char *names[TABS] = {"DX", "Aktiv", "Sonne"};
+  for (int i = 0; i < TABS; i++) {
     lv_obj_t *b = lv_btn_create(scr);
-    lv_obj_set_pos(b, 570 + i * 113, 192);
-    lv_obj_set_size(b, 111, 30);
+    lv_obj_set_pos(b, 570 + i * 76, 192);
+    lv_obj_set_size(b, 72, 30);
     lv_obj_set_style_radius(b, 6, 0);
     lv_obj_set_style_shadow_width(b, 0, 0);
     lv_obj_set_style_bg_color(b, C_PANE, 0);
@@ -198,8 +201,11 @@ static void build_info(lv_obj_t *scr) {
   // Reiter 0: DX-Spots
   dxpanel_create(tab_pane[0], 0, 0, 210, 234, qth.lat, qth.lon);
 
-  // Reiter 1: Sonne & Mond
-  lv_obj_t *p = tab_pane[1];
+  // Reiter 1: Aktivierungen (POTA/WWFF)
+  actpanel_create(tab_pane[1], 210, qth.lat, qth.lon);
+
+  // Reiter 2: Sonne & Mond
+  lv_obj_t *p = tab_pane[2];
   const lv_font_t *f = &lv_font_montserrat_16;
   label(p, f, C_DIM, 0, 0, LV_SYMBOL_UP " Aufg.");
   l_rise = label(p, f, C_TEXT, 90, 0, "--:--");
@@ -317,6 +323,7 @@ static void update_solar() {
 static void timer_fast(lv_timer_t *) {
   update_clock();
   dxpanel_update();
+  actpanel_update();
 }
 
 // Karte jede Minute neu berechnen (sobald die Uhrzeit gueltig ist)
@@ -325,10 +332,13 @@ static void timer_map(lv_timer_t *) {
   static time_t last = 0;
   if (!time_valid()) return;
   time_t now = time(nullptr);
-  bool spots = dxpanel_map_dirty() && now - last >= 15;
+  bool spots = (dxpanel_map_dirty() || actpanel_map_dirty()) && now - last >= 15;
   if (now - last >= 60 || spots) {
     last = now;
-    dxpanel_push_map_spots();
+    static MapSpot ms[100];
+    int n = dxpanel_map_spots(ms, 60);
+    n += actpanel_map_spots(ms + n, 100 - n);
+    worldmap_set_spots(ms, n);
     worldmap_render(now);
   }
 }

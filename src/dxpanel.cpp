@@ -213,11 +213,10 @@ void dxpanel_update() {
 
 bool dxpanel_map_dirty() { return map_dirty; }
 
-void dxpanel_push_map_spots() {
-  static MapSpot ms[MAP_SPOTS];
+int dxpanel_map_spots(MapSpot *ms, int max) {
   int n = 0;
-  for (int i = 0; i < n_view && n < MAP_SPOTS; i++)
-    if (view[i].ent >= 0) ms[n++] = {view[i].lat, view[i].lon, BAND_COLORS[view[i].band]};
-  worldmap_set_spots(ms, n);
+  for (int i = 0; i < n_view && n < max; i++)
+    if (view[i].ent >= 0) ms[n++] = {view[i].lat, view[i].lon, BAND_COLORS[view[i].band], SHAPE_DX};
   map_dirty = false;
+  return n;
 }

@@ -4,6 +4,16 @@ Alle wichtigen Änderungen an diesem Projekt. Format nach [Keep a Changelog](htt
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unreleased]
+### Hinzugefügt
+- Aktivierungen: POTA (api.pota.app) und WWFF (spots.wwff.co), Abruf alle 2 Minuten, Anzeige der letzten 60 Minuten
+- Reiter „Aktiv“: Typ (P/W), Frequenz, Rufzeichen, Referenz; Antippen zeigt Park-/Gebietsname, Mode, Region, Entfernung, Richtung, Kommentar
+- POTA/WWFF einzeln ein- und ausblendbar; der Bandfilter gilt auch für Aktivierungen
+- Kartenmarker: POTA als grünes Quadrat, WWFF als türkise Raute (ohne Pfad); in der Vollbild-Karte mit Rufzeichen und antippbar
+- JSON-Verarbeitung mit ArduinoJson (Filter, Speicher im PSRAM); Umlaute und Akzente werden für die Schrift in ASCII umgesetzt
+### Geändert
+- Rechte Spalte mit drei Reitern: DX, Aktiv, Sonne
+### Nicht umgesetzt
+- SOTA: Die SOTA-API erlaubt KI-generierter Software den Zugriff nur nach vorheriger Genehmigung
 
 ## [0.4.1] - 2026-11-06
 ### Behoben

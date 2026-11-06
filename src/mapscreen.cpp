@@ -7,12 +7,14 @@
 #include "settings.h"
 #include "spots.h"
 #include "dxpanel.h"
+#include "actpanel.h"
+#include "activations.h"
 #include "dxcluster.h"
 #include "net.h"
 #include "ui_theme.h"
 
 static constexpr int W = 800, H = 480;
-static constexpr int MAX_LABELS = 40;
+static constexpr int MAX_LABELS = 60;
 static constexpr float ZOOM_MIN = 1.0f, ZOOM_MAX = 8.0f;
 
 static lv_obj_t *scr, *scr_prev, *img, *slider, *l_zoom, *info_box, *info_lbl;
@@ -28,22 +30,30 @@ static uint32_t seen_seq;
 static time_t last_render;
 
 // ---------- Rendern ----------
+static bool add_label(int &k, double lat, double lon, const char *txt, uint32_t color) {
+  if (k >= MAX_LABELS) return false;
+  double x, y;
+  map_view_to_xy(view, lat, lon, x, y);
+  if (x < 0 || y < 12 || x > W - 60 || y > H) return true;
+  lv_obj_t *l = labels[k++];
+  lv_label_set_text(l, txt);
+  lv_obj_set_style_text_color(l, lv_color_hex(color), 0);
+  lv_obj_set_pos(l, (int)x + 7, (int)y - 9);
+  lv_obj_clear_flag(l, LV_OBJ_FLAG_HIDDEN);
+  return true;
+}
+
 static void place_labels() {
-  const Spot *sp;
-  int n = dxpanel_spots(&sp);
   int k = 0;
   if (zoom >= 2.0f) {
-    for (int i = 0; i < n && k < MAX_LABELS; i++) {
-      if (sp[i].ent < 0) continue;
-      double x, y;
-      map_view_to_xy(view, sp[i].lat, sp[i].lon, x, y);
-      if (x < 0 || y < 12 || x > W - 60 || y > H) continue;
-      lv_obj_t *l = labels[k++];
-      lv_label_set_text(l, sp[i].dx);
-      lv_obj_set_style_text_color(l, lv_color_hex(BAND_COLORS[sp[i].band]), 0);
-      lv_obj_set_pos(l, (int)x + 7, (int)y - 9);
-      lv_obj_clear_flag(l, LV_OBJ_FLAG_HIDDEN);
-    }
+    const Spot *sp;
+    int n = dxpanel_spots(&sp);
+    for (int i = 0; i < n; i++)
+      if (sp[i].ent >= 0 && !add_label(k, sp[i].lat, sp[i].lon, sp[i].dx, BAND_COLORS[sp[i].band])) break;
+    const Activation *ac;
+    int m = actpanel_items(&ac);
+    for (int i = 0; i < m; i++)
+      if (!add_label(k, ac[i].lat, ac[i].lon, ac[i].call, ACT_COLORS[ac[i].type])) break;
   }
   for (; k < MAX_LABELS; k++) lv_obj_add_flag(labels[k], LV_OBJ_FLAG_HIDDEN);
 }
@@ -51,19 +61,16 @@ static void place_labels() {
 static void render() {
   if (!time_valid()) return;
   uint32_t t0 = millis();
-  const Spot *sp;
-  int n = dxpanel_spots(&sp);
-  static MapSpot ms[64];
-  int m = 0;
-  for (int i = 0; i < n && m < 64; i++)
-    if (sp[i].ent >= 0) ms[m++] = {sp[i].lat, sp[i].lon, BAND_COLORS[sp[i].band]};
+  static MapSpot ms[100];
+  int m = dxpanel_map_spots(ms, 60);
+  m += actpanel_map_spots(ms + m, 100 - m);
   view = map_view_zoom(W, H, view.lat_c, view.lon_c, zoom);
   last_render = time(nullptr);
   map_render(buf, view, last_render, qlat, qlon, ms, m);
   lv_obj_set_pos(img, 0, 0);
   lv_obj_invalidate(img);
   place_labels();
-  seen_seq = dx_seq();
+  seen_seq = dx_seq() + act_seq();
   Serial.printf("Vollbild-Karte: Zoom %.1f gerendert in %lu ms\n", zoom, millis() - t0);
 }
 
@@ -101,8 +108,19 @@ static void tap(int x, int y) {
     double d = (sx - x) * (sx - x) + (sy - y) * (sy - y);
     if (d < best_d) { best_d = d; best = i; }
   }
-  char text[180];
-  if (best >= 0) {
+  const Activation *ac;
+  int m = actpanel_items(&ac);
+  int best_act = -1;
+  for (int i = 0; i < m; i++) {
+    double sx, sy;
+    map_view_to_xy(view, ac[i].lat, ac[i].lon, sx, sy);
+    double d = (sx - x) * (sx - x) + (sy - y) * (sy - y);
+    if (d < best_d) { best_d = d; best_act = i; best = -1; }
+  }
+  char text[200];
+  if (best_act >= 0) {
+    actpanel_format(ac[best_act], text, sizeof text);
+  } else if (best >= 0) {
     dxpanel_format_spot(sp[best], text, sizeof text);
   } else {
     double lat, lon;
@@ -185,7 +203,7 @@ static void on_qth(lv_event_t *) {
 
 static void periodic(lv_timer_t *) {
   time_t now = time(nullptr);
-  if (now - last_render >= 60 || (dx_seq() != seen_seq && now - last_render >= 15)) render();
+  if (now - last_render >= 60 || (dx_seq() + act_seq() != seen_seq && now - last_render >= 15)) render();
 }
 
 void mapscreen_open() {
