@@ -9,10 +9,19 @@ static lv_img_dsc_t dsc;
 static lv_obj_t *img, *info_box, *info_lbl;
 static lv_timer_t *info_timer;
 static double qlat, qlon;
+static constexpr int MAX_MAP_SPOTS = 60;
+static MapSpot *map_spots;
+static int n_map_spots = 0;
+
+void worldmap_set_spots(const MapSpot *sp, int n) {
+  if (n > MAX_MAP_SPOTS) n = MAX_MAP_SPOTS;
+  memcpy(map_spots, sp, n * sizeof(MapSpot));
+  n_map_spots = n;
+}
 
 void worldmap_render(time_t t) {
   uint32_t t0 = millis();
-  map_render(fb, t, qlat, qlon);
+  map_render(fb, t, qlat, qlon, map_spots, n_map_spots);
   lv_obj_invalidate(img);
   static bool first = true;
   if (first) { Serial.printf("Karte gerendert in %lu ms\n", millis() - t0); first = false; }
@@ -22,6 +31,13 @@ void worldmap_render(time_t t) {
 static void hide_info(lv_timer_t *) {
   lv_obj_add_flag(info_box, LV_OBJ_FLAG_HIDDEN);
   lv_timer_pause(info_timer);
+}
+
+void worldmap_show_info(const char *text) {
+  lv_label_set_text(info_lbl, text);
+  lv_obj_clear_flag(info_box, LV_OBJ_FLAG_HIDDEN);
+  lv_timer_reset(info_timer);
+  lv_timer_resume(info_timer);
 }
 
 static void map_clicked(lv_event_t *e) {
@@ -40,16 +56,14 @@ static void map_clicked(lv_event_t *e) {
   char buf[96];
   snprintf(buf, sizeof buf, "%s   %.1f%c %.1f%c   %.0f km   %.0f\xC2\xB0",
            loc, fabs(lat), lat >= 0 ? 'N' : 'S', fabs(lon), lon >= 0 ? 'E' : 'W', d, b);
-  lv_label_set_text(info_lbl, buf);
-  lv_obj_clear_flag(info_box, LV_OBJ_FLAG_HIDDEN);
-  lv_timer_reset(info_timer);
-  lv_timer_resume(info_timer);
+  worldmap_show_info(buf);
 }
 
 void worldmap_create(lv_obj_t *parent, int x, int y, double qth_lat, double qth_lon) {
   qlat = qth_lat;
   qlon = qth_lon;
   fb = (uint16_t *)heap_caps_malloc(MAP_W * MAP_H * 2, MALLOC_CAP_SPIRAM);
+  map_spots = (MapSpot *)heap_caps_malloc(MAX_MAP_SPOTS * sizeof(MapSpot), MALLOC_CAP_SPIRAM);
   memcpy(fb, map_day, MAP_W * MAP_H * 2);
 
   dsc.header.always_zero = 0;
@@ -67,7 +81,7 @@ void worldmap_create(lv_obj_t *parent, int x, int y, double qth_lat, double qth_
 
   info_box = lv_obj_create(parent);
   lv_obj_set_size(info_box, MAP_W - 16, LV_SIZE_CONTENT);
-  lv_obj_set_pos(info_box, x + 8, y + MAP_H - 40);
+  lv_obj_set_pos(info_box, x + 8, y + MAP_H - 62);
   lv_obj_set_style_bg_color(info_box, lv_color_hex(0x000000), 0);
   lv_obj_set_style_bg_opa(info_box, LV_OPA_70, 0);
   lv_obj_set_style_border_width(info_box, 0, 0);

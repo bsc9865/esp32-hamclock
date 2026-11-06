@@ -24,9 +24,10 @@ Legende: ✅ fertig · 🔨 in Arbeit · ⬜ geplant · 🟡 vereinfacht machbar
 - ❌ 3D-Globus (WebGL)
 
 ## Phase 3: DX-Cluster
-- ⬜ Telnet-DX-Cluster (DXSpider), Spot-Liste, Spots auf der Karte, Großkreis-Pfade
-- ⬜ Filter: Band, Mode, Watchlist
-- ⬜ Rufzeichen-Präfix → Land/Entfernung/Richtung (cty.dat, verkleinert)
+- ✅ Telnet-DX-Cluster (DXSpider), Spot-Liste, Spots auf der Karte, Großkreis-Pfade
+- ✅ Bandfilter
+- ⬜ Filter: Mode, Watchlist
+- ✅ Rufzeichen-Präfix → Land/Entfernung/Richtung (cty.dat)
 - 🟡 RBN-Spots
 
 ## Phase 4: Aktivierungen

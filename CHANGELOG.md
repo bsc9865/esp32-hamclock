@@ -4,6 +4,16 @@ Alle wichtigen Änderungen an diesem Projekt. Format nach [Keep a Changelog](htt
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unreleased]
+### Hinzugefügt
+- DX-Cluster-Client (Telnet, DXSpider): Standard dxspider.co.uk:7300, Login als RUFZEICHEN-7, automatische Neuverbindung mit Backoff
+- Spot-Liste in der rechten Spalte (Reiter „DX-Spots“): Bandfarbe, Frequenz, Rufzeichen, Alter; Antippen zeigt Land, CQ-Zone, Entfernung, Richtung, Mode, Spotter und Kommentar
+- Spots auf der Weltkarte: farbige Punkte nach Band mit Großkreis-Pfaden vom QTH
+- Bandfilter (160 m bis 70 cm) als Fenster, im NVS gespeichert
+- Präfix-Datenbank aus cty.dat (AD1C) für Land, Kontinent, CQ-Zone und Position
+- Mode-Erkennung aus Kommentar (FT8, CW, SSB, …) bzw. Bandplan
+- DX-Cluster-Server in den Einstellungen änderbar
+### Geändert
+- Rechte Spalte mit Reitern: „DX-Spots“ und „Sonne/Mond“
 
 ## [0.3.0] - 2026-11-06
 ### Hinzugefügt

@@ -1,6 +1,7 @@
 // Reines Karten-Rendering ohne LVGL/Arduino (auch auf dem PC testbar)
 #include "map_render.h"
 #include <math.h>
+#include <stdlib.h>
 #include "astro.h"
 
 static constexpr double DEG = M_PI / 180.0;
@@ -97,6 +98,54 @@ static void render_grid() {
   }
 }
 
+// Linie mit Alpha (w = 0..32), Bresenham; Segmente ueber die Datumsgrenze werden ausgelassen
+static void line(int x0, int y0, int x1, int y1, uint16_t c, uint32_t w) {
+  if (abs(x1 - x0) > MAP_W / 2) return;
+  int dx = abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
+  int dy = -abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
+  int err = dx + dy;
+  for (;;) {
+    px(x0, y0, c, w);
+    if (x0 == x1 && y0 == y1) break;
+    int e2 = 2 * err;
+    if (e2 >= dy) { err += dy; x0 += sx; }
+    if (e2 <= dx) { err += dx; y0 += sy; }
+  }
+}
+
+static inline uint16_t hex565(uint32_t c) { return rgb((c >> 16) & 0xFF, (c >> 8) & 0xFF, c & 0xFF); }
+
+// Grosskreis vom QTH zum Spot (Interpolation auf der Kugel)
+static void great_circle(double lat1, double lon1, double lat2, double lon2, uint16_t c) {
+  double p1 = lat1 * DEG, l1 = lon1 * DEG, p2 = lat2 * DEG, l2 = lon2 * DEG;
+  double x1 = cos(p1) * cos(l1), y1 = cos(p1) * sin(l1), z1 = sin(p1);
+  double x2 = cos(p2) * cos(l2), y2 = cos(p2) * sin(l2), z2 = sin(p2);
+  double d = acos(fmin(1.0, fmax(-1.0, x1 * x2 + y1 * y2 + z1 * z2)));
+  if (d < 1e-3) return;
+  int steps = 8 + (int)(d / M_PI * 120);
+  int px0 = -1, py0 = -1;
+  for (int i = 0; i <= steps; i++) {
+    double f = (double)i / steps;
+    double A = sin((1 - f) * d) / sin(d), B = sin(f * d) / sin(d);
+    double x = A * x1 + B * x2, y = A * y1 + B * y2, z = A * z1 + B * z2;
+    int sx, sy;
+    worldmap_to_xy(atan2(z, sqrt(x * x + y * y)) / DEG, atan2(y, x) / DEG, sx, sy);
+    if (px0 >= 0) line(px0, py0, sx, sy, c, 20);
+    px0 = sx; py0 = sy;
+  }
+}
+
+static void render_spots(const MapSpot *sp, int n) {
+  for (int i = n - 1; i >= 0; i--)   // aelteste zuerst, neueste oben
+    great_circle(qlat, qlon, sp[i].lat, sp[i].lon, hex565(sp[i].color));
+  for (int i = n - 1; i >= 0; i--) {
+    int x, y;
+    worldmap_to_xy(sp[i].lat, sp[i].lon, x, y);
+    disc(x, y, 4, rgb(0, 0, 0));
+    disc(x, y, 3, hex565(sp[i].color));
+  }
+}
+
 static void render_markers(time_t t, const SunPos &s) {
   int x, y;
   // Mond
@@ -116,12 +165,14 @@ static void render_markers(time_t t, const SunPos &s) {
   disc(x, y, 1, rgb(255, 255, 255));
 }
 
-void map_render(uint16_t *buf, time_t t, double qth_lat, double qth_lon) {
+void map_render(uint16_t *buf, time_t t, double qth_lat, double qth_lon,
+                const MapSpot *spots, int n_spots) {
   fb = buf;
   qlat = qth_lat;
   qlon = qth_lon;
   SunPos s = sun_position(t);
   render_daynight(s);
   render_grid();
+  if (spots && n_spots > 0) render_spots(spots, n_spots);
   render_markers(t, s);
 }

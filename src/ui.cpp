@@ -17,6 +17,7 @@
 #include "worldmap.h"
 #include "settings.h"
 #include "settings_ui.h"
+#include "dxpanel.h"
 
 #include "ui_theme.h"
 
@@ -156,33 +157,76 @@ static void build_map(lv_obj_t *scr) {
   worldmap_create(scr, 6, 194, qth.lat, qth.lon);
 }
 
+// Rechte Spalte mit zwei Reitern: DX-Spots | Sonne/Mond
+static lv_obj_t *tab_btn[2], *tab_pane[2];
+
+static void select_tab(int i) {
+  for (int k = 0; k < 2; k++) {
+    if (k == i) {
+      lv_obj_clear_flag(tab_pane[k], LV_OBJ_FLAG_HIDDEN);
+      lv_obj_add_state(tab_btn[k], LV_STATE_CHECKED);
+    } else {
+      lv_obj_add_flag(tab_pane[k], LV_OBJ_FLAG_HIDDEN);
+      lv_obj_clear_state(tab_btn[k], LV_STATE_CHECKED);
+    }
+  }
+}
+
+static void tab_clicked(lv_event_t *e) { select_tab((int)(intptr_t)lv_event_get_user_data(e)); }
+
 static void build_info(lv_obj_t *scr) {
-  char title[40];
-  snprintf(title, sizeof title, "Sonne & Mond @ %s", g_settings.loc);
-  lv_obj_t *p = pane(scr, 570, 192, 224, 282, title);
+  static const char *names[2] = {"DX-Spots", "Sonne/Mond"};
+  for (int i = 0; i < 2; i++) {
+    lv_obj_t *b = lv_btn_create(scr);
+    lv_obj_set_pos(b, 570 + i * 113, 192);
+    lv_obj_set_size(b, 111, 30);
+    lv_obj_set_style_radius(b, 6, 0);
+    lv_obj_set_style_shadow_width(b, 0, 0);
+    lv_obj_set_style_bg_color(b, C_PANE, 0);
+    lv_obj_set_style_bg_color(b, lv_color_hex(0x1E3A5F), LV_STATE_CHECKED);
+    lv_obj_set_style_border_color(b, C_BORDER, 0);
+    lv_obj_set_style_border_width(b, 1, 0);
+    lv_obj_add_event_cb(b, tab_clicked, LV_EVENT_CLICKED, (void *)(intptr_t)i);
+    lv_obj_t *l = lv_label_create(b);
+    lv_label_set_text(l, names[i]);
+    lv_obj_set_style_text_font(l, &lv_font_montserrat_14, 0);
+    lv_obj_center(l);
+    tab_btn[i] = b;
+    tab_pane[i] = pane(scr, 570, 226, 224, 248, nullptr);
+  }
+
+  // Reiter 0: DX-Spots
+  dxpanel_create(tab_pane[0], 0, 0, 210, 234, qth.lat, qth.lon);
+
+  // Reiter 1: Sonne & Mond
+  lv_obj_t *p = tab_pane[1];
   const lv_font_t *f = &lv_font_montserrat_16;
-  label(p, f, C_DIM, 0, 22, LV_SYMBOL_UP " Aufg.");
-  l_rise = label(p, f, C_TEXT, 90, 22, "--:--");
-  label(p, f, C_DIM, 0, 44, LV_SYMBOL_DOWN " Unterg.");
-  l_set = label(p, f, C_TEXT, 90, 44, "--:--");
-  label(p, f, C_DIM, 0, 66, "Hoehe");
-  l_sunalt = label(p, f, C_TEXT, 90, 66, "--");
-  label(p, f, C_DIM, 0, 88, "Mond");
-  l_moon = label(p, &lv_font_montserrat_14, C_TEXT, 90, 90, "--");
+  label(p, f, C_DIM, 0, 0, LV_SYMBOL_UP " Aufg.");
+  l_rise = label(p, f, C_TEXT, 90, 0, "--:--");
+  label(p, f, C_DIM, 0, 22, LV_SYMBOL_DOWN " Unterg.");
+  l_set = label(p, f, C_TEXT, 90, 22, "--:--");
+  label(p, f, C_DIM, 0, 44, "Hoehe");
+  l_sunalt = label(p, f, C_TEXT, 90, 44, "--");
+  label(p, f, C_DIM, 0, 66, "Mond");
+  l_moon = label(p, &lv_font_montserrat_14, C_TEXT, 90, 68, "--");
 
-  lv_obj_t *t = label(p, &lv_font_montserrat_14, C_ACCENT, 0, 120, "VHF");
-  (void)t;
-  label(p, &lv_font_montserrat_14, C_DIM, 0, 142, "Aurora");
-  l_aurora = label(p, &lv_font_montserrat_14, C_TEXT, 90, 142, "--");
-  label(p, &lv_font_montserrat_14, C_DIM, 0, 162, "Es EU 6m");
-  l_es6 = label(p, &lv_font_montserrat_14, C_TEXT, 90, 162, "--");
-  label(p, &lv_font_montserrat_14, C_DIM, 0, 182, "Es EU 4m");
-  l_es4 = label(p, &lv_font_montserrat_14, C_TEXT, 90, 182, "--");
-  label(p, &lv_font_montserrat_14, C_DIM, 0, 202, "Es EU 2m");
-  l_es2 = label(p, &lv_font_montserrat_14, C_TEXT, 90, 202, "--");
+  label(p, &lv_font_montserrat_14, C_ACCENT, 0, 96, "VHF");
+  label(p, &lv_font_montserrat_14, C_DIM, 0, 116, "Aurora");
+  l_aurora = label(p, &lv_font_montserrat_14, C_TEXT, 90, 116, "--");
+  label(p, &lv_font_montserrat_14, C_DIM, 0, 134, "Es EU 6m");
+  l_es6 = label(p, &lv_font_montserrat_14, C_TEXT, 90, 134, "--");
+  label(p, &lv_font_montserrat_14, C_DIM, 0, 152, "Es EU 4m");
+  l_es4 = label(p, &lv_font_montserrat_14, C_TEXT, 90, 152, "--");
+  label(p, &lv_font_montserrat_14, C_DIM, 0, 170, "Es EU 2m");
+  l_es2 = label(p, &lv_font_montserrat_14, C_TEXT, 90, 170, "--");
 
-  l_stand = label(p, &lv_font_montserrat_12, C_DIM, 0, 230, "Daten: --");
-  l_mem = label(p, &lv_font_montserrat_12, C_DIM, 0, 248, "");
+  char t[40];
+  snprintf(t, sizeof t, "QTH %s", g_settings.loc);
+  label(p, &lv_font_montserrat_12, C_DIM, 0, 194, t);
+  l_stand = label(p, &lv_font_montserrat_12, C_DIM, 70, 194, "Daten: --");
+  l_mem = label(p, &lv_font_montserrat_12, C_DIM, 0, 212, "");
+
+  select_tab(0);
 }
 
 // ---------- Aktualisierung ----------
@@ -267,18 +311,24 @@ static void update_solar() {
   vhf(l_es6, s.es_eu_6m);
   vhf(l_es4, s.es_eu_4m);
   vhf(l_es2, s.es_eu_2m);
-  set_text(l_stand, "N0NBH:%s", s.updated);
+  set_text(l_stand, "N0NBH %s", s.updated);
 }
 
-static void timer_fast(lv_timer_t *) { update_clock(); }
+static void timer_fast(lv_timer_t *) {
+  update_clock();
+  dxpanel_update();
+}
 
 // Karte jede Minute neu berechnen (sobald die Uhrzeit gueltig ist)
+// Karte neu berechnen: jede Minute (Greyline) oder bei neuen Spots (hoechstens alle 15 s)
 static void timer_map(lv_timer_t *) {
   static time_t last = 0;
   if (!time_valid()) return;
   time_t now = time(nullptr);
-  if (now - last >= 60) {
+  bool spots = dxpanel_map_dirty() && now - last >= 15;
+  if (now - last >= 60 || spots) {
     last = now;
+    dxpanel_push_map_spots();
     worldmap_render(now);
   }
 }

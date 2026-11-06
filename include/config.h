@@ -16,6 +16,12 @@
 #define SOLAR_REFRESH_S    (30 * 60)
 #define RETRY_S            (2 * 60)
 
+// DX-Cluster (DXSpider, Telnet)
+#define DX_CLUSTER_DEFAULT "dxspider.co.uk:7300"
+#define DX_LOGIN_SSID      "-7"        // Login als RUFZEICHEN-7 (vermeidet Konflikt mit Logbuch-Programmen)
+#define DX_MAX_SPOTS       200
+#define DX_RETENTION_S     (30 * 60)
+
 #ifndef FW_VERSION
 #define FW_VERSION "dev"
 #endif

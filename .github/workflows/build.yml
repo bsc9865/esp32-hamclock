@@ -35,6 +35,7 @@ jobs:
           ./render_map 1781964000 karte.raw
           cc -c src/data/cty_data.c -o cty_data.o
           c++ -std=c++17 -Isrc test/host/test_cty.cpp src/cty.cpp cty_data.o -o test_cty && ./test_cty
+          c++ -std=c++17 -Isrc test/host/test_spots.cpp src/spots.cpp src/cty.cpp cty_data.o -o test_spots && ./test_spots
 
       - name: PlatformIO installieren
         run: pip install platformio esptool

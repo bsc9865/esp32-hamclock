@@ -17,7 +17,7 @@
 #include "config.h"
 
 static lv_obj_t *scr_prev, *scr;
-static lv_obj_t *ta_ssid, *ta_pass, *ta_call, *ta_loc;
+static lv_obj_t *ta_ssid, *ta_pass, *ta_call, *ta_loc, *ta_cluster;
 static lv_obj_t *list, *kb, *l_status, *btn_scan;
 static lv_timer_t *scan_timer;
 
@@ -165,6 +165,10 @@ static void on_save(lv_event_t *) {
   for (; call[i] && i < sizeof s.call - 1; i++) s.call[i] = toupper(call[i]);
   s.call[i] = 0;
   strcpy(s.loc, loc);
+  const char *cl = lv_textarea_get_text(ta_cluster);
+  if (!*cl || !strchr(cl, '.')) { status("DX-Cluster ungueltig (host:port)", C_POOR); return; }
+  strncpy(s.cluster, cl, sizeof s.cluster - 1);
+  s.cluster[sizeof s.cluster - 1] = 0;
   if (!settings_save(s)) { status("Speichern fehlgeschlagen!", C_POOR); return; }
   status("Gespeichert - Neustart ...", C_GOOD);
   lv_timer_create(restart_cb, 800, nullptr);
@@ -222,9 +226,12 @@ void settings_ui_open() {
   ta_call = mk_ta(scr, 560, 48, 228, g_settings.call, 12);
   mk_label(scr, 452, 108, "Locator");
   ta_loc = mk_ta(scr, 560, 100, 228, g_settings.loc, 6);
-  mk_btn(scr, 452, 160, 336, LV_SYMBOL_SAVE "  Speichern & Neustart", on_save, lv_color_hex(0x15803D));
-  mk_btn(scr, 452, 218, 336, LV_SYMBOL_CLOSE "  Abbrechen", on_cancel, lv_color_hex(0x374151));
-  l_status = mk_label(scr, 452, 276, "", &lv_font_montserrat_16, C_TEXT);
+  mk_label(scr, 452, 160, "DX-Cluster");
+  ta_cluster = mk_ta(scr, 560, 152, 228, g_settings.cluster, 47);
+  lv_obj_set_style_text_font(ta_cluster, &lv_font_montserrat_16, 0);
+  mk_btn(scr, 452, 208, 336, LV_SYMBOL_SAVE "  Speichern & Neustart", on_save, lv_color_hex(0x15803D));
+  mk_btn(scr, 452, 264, 336, LV_SYMBOL_CLOSE "  Abbrechen", on_cancel, lv_color_hex(0x374151));
+  l_status = mk_label(scr, 452, 322, "", &lv_font_montserrat_16, C_TEXT);
   lv_obj_set_width(l_status, 336);
   lv_label_set_long_mode(l_status, LV_LABEL_LONG_WRAP);
 

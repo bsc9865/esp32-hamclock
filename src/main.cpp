@@ -7,6 +7,7 @@
 #include "datastore.h"
 #include "ui.h"
 #include "settings.h"
+#include "dxcluster.h"
 
 void setup() {
   Serial.begin(115200);
@@ -18,6 +19,7 @@ void setup() {
   display_init();
   net_begin();
   datastore_begin();
+  dxcluster_begin();
   ui_build();
   Serial.printf("Setup fertig. Freier Speicher: intern %u KB (groesster Block %u KB), PSRAM %u KB\n",
                 heap_caps_get_free_size(MALLOC_CAP_INTERNAL) / 1024,
