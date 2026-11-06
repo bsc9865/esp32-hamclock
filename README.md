@@ -13,14 +13,17 @@ Den geplanten Funktionsumfang und den aktuellen Stand zeigt die [ROADMAP.md](ROA
 | Komponente | Details |
 |---|---|
 | MCU | ESP32-S3, 16 MB Flash, 8 MB Octal-PSRAM |
-| Display | 7" 800×480, RGB565 parallel |
+| Display | 7" 800×480, RGB565 parallel (esp_lcd mit Bounce-Buffern) |
 | Touch | GT911 (I²C, GPIO8/9, INT GPIO4) |
 | IO-Expander | CH422G: Backlight, LCD/Touch-Reset, SD-CS, USB/CAN-Umschaltung |
 
 ## Bauen und Flashen
 
 ```bash
-brew install platformio
+# PlatformIO braucht Python 3.10–3.14 (pioarduino-Plattform)
+brew install python@3.13
+python3.13 -m venv ~/.local/share/pio-venv && ~/.local/share/pio-venv/bin/pip install platformio
+ln -s ~/.local/share/pio-venv/bin/pio ~/.local/bin/pio
 cp include/secrets.h.example include/secrets.h   # WLAN-Daten eintragen
 pio run -t upload        # bauen und flashen
 pio device monitor       # serielle Ausgabe
@@ -33,7 +36,7 @@ Jedes getaggte Release (`vX.Y.Z`) wird von GitHub Actions gebaut. Unter *Release
 - `esp32-hamclock-app.bin`: nur die App für Adresse `0x10000`
 
 ```bash
-esptool.py --chip esp32s3 write_flash 0x0 esp32-hamclock-factory.bin
+esptool --chip esp32s3 write-flash 0x0 esp32-hamclock-factory.bin
 ```
 
 ## Projektstruktur
@@ -41,7 +44,6 @@ esptool.py --chip esp32s3 write_flash 0x0 esp32-hamclock-factory.bin
 ```
 include/board_pins.h    Pinbelegung
 include/board_io.h      CH422G- und GT911-Treiber
-include/lgfx_config.h   Display-Treiber (LovyanGFX)
 include/lv_conf.h       LVGL-Konfiguration
 include/config.h        Station und Einstellungen
 src/                    Anwendung

@@ -32,6 +32,7 @@ void net_begin() {
     Serial.printf("WLAN getrennt, Grund %d\n", info.wifi_sta_disconnected.reason);
   }, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
 
+  WiFi.persistent(false);   // keine Flash-Schreibzugriffe (stoeren das Display)
   WiFi.mode(WIFI_STA);
 
   // Diagnose: sichtbare Netze auflisten

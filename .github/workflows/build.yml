@@ -35,7 +35,7 @@ jobs:
           ./render_map 1781964000 karte.raw
 
       - name: PlatformIO installieren
-        run: pip install platformio
+        run: pip install platformio esptool
 
       - name: Dummy-secrets.h anlegen
         run: cp include/secrets.h.example include/secrets.h
@@ -47,8 +47,8 @@ jobs:
         run: |
           B=.pio/build/waveshare-s3-lcd7
           APP0=~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin
-          pio pkg exec -p tool-esptoolpy -- esptool.py --chip esp32s3 merge_bin \
-            -o esp32-hamclock-factory.bin --flash_mode keep --flash_size 16MB \
+          python -m esptool --chip esp32s3 merge-bin \
+            -o esp32-hamclock-factory.bin --flash-mode keep --flash-size 16MB \
             0x0 $B/bootloader.bin 0x8000 $B/partitions.bin 0xe000 $APP0 0x10000 $B/firmware.bin
           cp $B/firmware.bin esp32-hamclock-app.bin
 

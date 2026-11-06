@@ -15,7 +15,11 @@ Versionierung nach [SemVer](https://semver.org/lang/de/).
 - Antippen der Karte zeigt Locator, Koordinaten, Entfernung und Richtung vom QTH
 - Host-Tests für Astronomie und Geo-Rechnungen, laufen in der CI mit
 - `scripts/gen_maps.py` erzeugt die Kartenbilder aus den NASA-Vorlagen
+### Behoben
+- Springendes/verrutschendes Bild: Display-Treiber auf ESP-IDF `esp_lcd` mit Bounce-Buffern umgestellt; WLAN schreibt nicht mehr in den Flash
 ### Geändert
+- Plattform auf pioarduino (Arduino-Core 3.3 / ESP-IDF 5.5) umgestellt, LovyanGFX entfernt
+- Serielle Ausgabe über den UART-Port (CH343)
 - Code in Module aufgeteilt (display, net, astro, solar, datastore, ui), C++17
 
 ## [0.1.0] - 2026-11-06

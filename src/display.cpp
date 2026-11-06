@@ -1,19 +1,28 @@
+// Display-Treiber: ESP-IDF esp_lcd RGB-Panel mit Bounce-Buffern
+//
+// Der Framebuffer liegt im PSRAM. Damit PSRAM-Zugriffe von CPU (LVGL, Karte,
+// WLAN/TLS) den Display-DMA nicht ausbremsen (Bild "springt"), wird das Bild
+// zeilenweise ueber kleine Bounce-Buffer im internen SRAM ausgegeben.
 #include "display.h"
 #include <Arduino.h>
 #include <Wire.h>
 #include <lvgl.h>
-#include "lgfx_config.h"
+#include <esp_lcd_panel_ops.h>
+#include <esp_lcd_panel_rgb.h>
+#include "board_pins.h"
 #include "board_io.h"
 
-static LGFX tft;
+static esp_lcd_panel_handle_t panel;
 
-static constexpr int BUF_LINES = 40;
+static constexpr int LCD_PCLK_HZ   = 16 * 1000 * 1000;
+static constexpr int BOUNCE_LINES  = 10;   // 800*480 muss durch 2*BOUNCE_LINES*800 teilbar sein
+static constexpr int LV_BUF_LINES  = 40;
+
 static lv_disp_draw_buf_t draw_buf;
 
-static void flush_cb(lv_disp_drv_t *drv, const lv_area_t *area, lv_color_t *px) {
-  uint32_t w = area->x2 - area->x1 + 1;
-  uint32_t h = area->y2 - area->y1 + 1;
-  tft.pushImage(area->x1, area->y1, w, h, (lgfx::rgb565_t *)&px->full);
+static void flush_cb(lv_disp_drv_t *drv, const lv_area_t *a, lv_color_t *px) {
+  // Kopiert synchron in den Framebuffer
+  esp_lcd_panel_draw_bitmap(panel, a->x1, a->y1, a->x2 + 1, a->y2 + 1, px);
   lv_disp_flush_ready(drv);
 }
 
@@ -28,6 +37,47 @@ static void touch_cb(lv_indev_drv_t *, lv_indev_data_t *data) {
   }
 }
 
+static void panel_init() {
+  esp_lcd_rgb_panel_config_t cfg;
+  memset(&cfg, 0, sizeof cfg);
+  cfg.clk_src = LCD_CLK_SRC_DEFAULT;
+  cfg.timings.pclk_hz = LCD_PCLK_HZ;
+  cfg.timings.h_res = LCD_WIDTH;
+  cfg.timings.v_res = LCD_HEIGHT;
+  cfg.timings.hsync_pulse_width = 4;
+  cfg.timings.hsync_back_porch = 8;
+  cfg.timings.hsync_front_porch = 8;
+  cfg.timings.vsync_pulse_width = 4;
+  cfg.timings.vsync_back_porch = 8;
+  cfg.timings.vsync_front_porch = 8;
+  cfg.timings.flags.pclk_active_neg = 1;
+  cfg.data_width = 16;
+  cfg.bits_per_pixel = 16;
+  cfg.num_fbs = 1;
+  cfg.bounce_buffer_size_px = LCD_WIDTH * BOUNCE_LINES;
+  cfg.dma_burst_size = 64;
+  cfg.hsync_gpio_num = PIN_LCD_HSYNC;
+  cfg.vsync_gpio_num = PIN_LCD_VSYNC;
+  cfg.de_gpio_num = PIN_LCD_DE;
+  cfg.pclk_gpio_num = PIN_LCD_PCLK;
+  cfg.disp_gpio_num = -1;
+  const int data_pins[16] = {
+    PIN_LCD_B0, PIN_LCD_B1, PIN_LCD_B2, PIN_LCD_B3, PIN_LCD_B4,
+    PIN_LCD_G0, PIN_LCD_G1, PIN_LCD_G2, PIN_LCD_G3, PIN_LCD_G4, PIN_LCD_G5,
+    PIN_LCD_R0, PIN_LCD_R1, PIN_LCD_R2, PIN_LCD_R3, PIN_LCD_R4};
+  for (int i = 0; i < 16; i++) cfg.data_gpio_nums[i] = data_pins[i];
+  cfg.flags.fb_in_psram = 1;
+
+  ESP_ERROR_CHECK(esp_lcd_new_rgb_panel(&cfg, &panel));
+  ESP_ERROR_CHECK(esp_lcd_panel_reset(panel));
+  ESP_ERROR_CHECK(esp_lcd_panel_init(panel));
+
+  // Framebuffer schwarz fuellen
+  void *fb = nullptr;
+  esp_lcd_rgb_panel_get_frame_buffer(panel, 1, &fb);
+  if (fb) memset(fb, 0, LCD_WIDTH * LCD_HEIGHT * 2);
+}
+
 void display_backlight(bool on) { ioexp::backlight(on); }
 
 void display_init() {
@@ -35,12 +85,11 @@ void display_init() {
   ioexp::begin();
   if (!touch::begin()) Serial.println("WARNUNG: GT911 nicht gefunden!");
 
-  tft.init();
-  tft.fillScreen(TFT_BLACK);
+  panel_init();
   ioexp::backlight(true);
 
   lv_init();
-  size_t n = LCD_WIDTH * BUF_LINES;
+  size_t n = LCD_WIDTH * LV_BUF_LINES;
   auto *b1 = (lv_color_t *)heap_caps_malloc(n * sizeof(lv_color_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
   auto *b2 = (lv_color_t *)heap_caps_malloc(n * sizeof(lv_color_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
   lv_disp_draw_buf_init(&draw_buf, b1, b2, n);
@@ -58,4 +107,7 @@ void display_init() {
   indev_drv.type = LV_INDEV_TYPE_POINTER;
   indev_drv.read_cb = touch_cb;
   lv_indev_drv_register(&indev_drv);
+
+  Serial.printf("Display: %dx%d @ %d MHz, Bounce-Buffer %d Zeilen\n",
+                LCD_WIDTH, LCD_HEIGHT, LCD_PCLK_HZ / 1000000, BOUNCE_LINES);
 }
