@@ -40,8 +40,10 @@ jobs:
       - name: Dummy-secrets.h anlegen
         run: cp include/secrets.h.example include/secrets.h
 
+      # Beim ersten Lauf baut pioarduino die Arduino-Bibliotheken mit custom_sdkconfig neu
+      # und bricht danach mit einem SCons-Fehler ab; der zweite Lauf baut dann die Firmware.
       - name: Firmware bauen
-        run: pio run
+        run: pio run || pio run
 
       - name: Factory-Image erzeugen
         run: |
