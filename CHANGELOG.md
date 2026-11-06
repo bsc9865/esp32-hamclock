@@ -4,6 +4,8 @@ Alle wichtigen Änderungen an diesem Projekt. Format nach [Keep a Changelog](htt
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unreleased]
+
+## [0.2.1] - 2026-11-06
 ### Geändert
 - LVGL-Speicher (Widgets, Styles, Texte) kommt aus dem PSRAM statt aus dem internen RAM
 - TLS (mbedTLS) und WLAN/lwIP-Puffer dürfen den PSRAM nutzen: intern frei nach dem Start 60 → 81 KB
@@ -12,6 +14,8 @@ Versionierung nach [SemVer](https://semver.org/lang/de/).
 - Absturz in lwIP („Required to lock TCPIP core“) durch einen Wettlauf zwischen SNTP-DNS-Anfrage und dem DNS-Cache-Leeren im Arduino-Core: SNTP startet jetzt erst nach der ersten eigenen Namensauflösung, Datenabrufe erst mit gültiger Uhrzeit
 
 ## [0.2.0] - 2026-11-06
+> Hinweis: Für v0.2.0 gibt es kein Release (CI-Build fehlgeschlagen), erstes Release ist v0.2.1.
+
 ### Hinzugefügt
 - Dashboard-Layout für 800×480: Kopfzeile, Uhr, Sonnendaten, HF-Bedingungen, Platz für die Karte, Infospalte
 - WLAN-Verbindung (Zugangsdaten in `include/secrets.h`), NTP-Zeit, UTC und MEZ/MESZ
