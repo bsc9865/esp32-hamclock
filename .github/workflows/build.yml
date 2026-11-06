@@ -31,8 +31,9 @@ jobs:
       - name: Host-Tests (Astronomie, Geo, Karten-Rendering)
         run: |
           c++ -std=c++17 -Isrc test/host/test_astro.cpp src/astro.cpp -o test_astro && ./test_astro
-          c++ -O2 -std=c++17 -x c++ -Isrc test/host/render_map.cpp src/map_render.cpp src/astro.cpp src/maps/map_day.c src/maps/map_night.c -o render_map
-          ./render_map 1781964000 karte.raw
+          c++ -O2 -std=c++17 -Isrc test/host/render_map.cpp test/host/maps_file.cpp src/map_render.cpp src/astro.cpp -o render_map
+          ./render_map 1781964000 560 280 1 0 0 karte.ppm
+          ./render_map 1781964000 800 480 6 50 10 zoom.ppm
           cc -c src/data/cty_data.c -o cty_data.o
           c++ -std=c++17 -Isrc test/host/test_cty.cpp src/cty.cpp cty_data.o -o test_cty && ./test_cty
           c++ -std=c++17 -Isrc test/host/test_spots.cpp src/spots.cpp src/cty.cpp cty_data.o -o test_spots && ./test_spots

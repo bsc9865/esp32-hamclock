@@ -1,15 +1,16 @@
-// Automatisch erzeugt von scripts/gen_maps.py
 #pragma once
+// Kartenbilder: 256-Farben-Palette (RGB565) + 1 Byte pro Pixel, equirektangulaer
+// Erzeugt von scripts/gen_maps.py -> assets/map_day.bin, assets/map_night.bin
 #include <stdint.h>
 
-#define MAP_W 560
-#define MAP_H 280
+#define MAP_SRC_W 1600
+#define MAP_SRC_H 800
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-extern const uint16_t map_day[MAP_W * MAP_H];
-extern const uint16_t map_night[MAP_W * MAP_H];
-#ifdef __cplusplus
-}
-#endif
+struct MapImage {
+  const uint16_t *pal;   // 256 Eintraege (im RAM, ausgerichtet)
+  const uint8_t *px;     // MAP_SRC_W * MAP_SRC_H Indizes
+};
+
+// Auf dem ESP32: eingebettete Dateien; auf dem PC: aus Datei geladen
+MapImage maps_day();
+MapImage maps_night();

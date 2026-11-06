@@ -12,7 +12,11 @@ Versionierung nach [SemVer](https://semver.org/lang/de/).
 - Präfix-Datenbank aus cty.dat (AD1C) für Land, Kontinent, CQ-Zone und Position
 - Mode-Erkennung aus Kommentar (FT8, CW, SSB, …) bzw. Bandplan
 - DX-Cluster-Server in den Einstellungen änderbar
+- Vollbild-Karte (Button „Vollbild“ auf der Dashboard-Karte): Zoom 1×–8× per Regler und +/−, Verschieben mit dem Finger, QTH zentrieren, Rufzeichen-Beschriftung ab Zoom 2, Antippen zeigt Spot-Details bzw. Locator/Entfernung
+- Maidenhead-Quadrate (2°×1°) im Gitter bei starkem Zoom
 ### Geändert
+- Kartenbilder in 1600×800 mit 256-Farben-Palette (eingebettete Binärdateien statt C-Arrays), bilineare Glättung beim Vergrößern
+- Renderer zeichnet beliebige Kartenausschnitte (Mittelpunkt + Maßstab)
 - Rechte Spalte mit Reitern: „DX-Spots“ und „Sonne/Mond“
 
 ## [0.3.0] - 2026-11-06

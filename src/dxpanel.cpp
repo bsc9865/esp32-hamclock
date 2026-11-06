@@ -24,23 +24,31 @@ static uint32_t last_refresh = 0;
 static bool map_dirty = true, force = true;
 
 // ---------- Spot-Details ----------
-static void row_clicked(lv_event_t *e) {
-  int i = (int)(intptr_t)lv_event_get_user_data(e);
-  if (i >= n_view) return;
-  const Spot &s = view[i];
-  char buf[160];
+int dxpanel_spots(const Spot **out) {
+  *out = view;
+  return n_view;
+}
+
+void dxpanel_format_spot(const Spot &s, char *buf, size_t n) {
   struct tm u;
   gmtime_r(&s.t, &u);
   if (s.ent >= 0) {
     const CtyEntity &c = cty_entities[s.ent];
     double d = gc_distance_km(qlat, qlon, s.lat, s.lon);
     double b = gc_bearing_deg(qlat, qlon, s.lat, s.lon);
-    snprintf(buf, sizeof buf, "%s  %s (%s, CQ %d)  %.0f km  %.0f\xC2\xB0\n%.1f kHz %s  de %s  %02d%02dZ  %s",
+    snprintf(buf, n, "%s  %s (%s, CQ %d)  %.0f km  %.0f\xC2\xB0\n%.1f kHz %s  de %s  %02d%02dZ  %s",
              s.dx, c.name, c.cont, s.cq, d, b, s.khz, s.mode, s.spotter, u.tm_hour, u.tm_min, s.comment);
   } else {
-    snprintf(buf, sizeof buf, "%s  (Land unbekannt)\n%.1f kHz %s  de %s  %02d%02dZ  %s",
+    snprintf(buf, n, "%s  (Land unbekannt)\n%.1f kHz %s  de %s  %02d%02dZ  %s",
              s.dx, s.khz, s.mode, s.spotter, u.tm_hour, u.tm_min, s.comment);
   }
+}
+
+static void row_clicked(lv_event_t *e) {
+  int i = (int)(intptr_t)lv_event_get_user_data(e);
+  if (i >= n_view) return;
+  char buf[160];
+  dxpanel_format_spot(view[i], buf, sizeof buf);
   worldmap_show_info(buf);
 }
 
