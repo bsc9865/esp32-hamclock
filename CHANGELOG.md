@@ -4,6 +4,8 @@ Alle wichtigen Änderungen an diesem Projekt. Format nach [Keep a Changelog](htt
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unreleased]
+
+## [0.3.0] - 2026-11-06
 ### Hinzugefügt
 - Einstellungsseite am Gerät (Zahnrad oben rechts): WLAN-Suche mit Netzliste, Passwort per Bildschirmtastatur, Rufzeichen und Locator
 - Einstellungen im NVS: bleiben bei Firmware-Updates erhalten; Speichern startet das Gerät neu

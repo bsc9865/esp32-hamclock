@@ -31,7 +31,7 @@ bool settings_normalize_locator(const char *in, char out[7]) {
 
 void settings_load() {
   Preferences p;
-  p.begin(NS, true);
+  p.begin(NS, false);   // legt den Namensraum beim ersten Start an (kein Fehler-Log)
   bool has = p.isKey("call");
   Settings s;
   copy(s.ssid, sizeof s.ssid, p.getString("ssid", ""));
