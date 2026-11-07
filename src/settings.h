@@ -15,7 +15,7 @@ struct Settings {
   char ota_pw[33] = "";       // Passwort fuer Updates ueber das Netzwerk (leer = aus)
 };
 
-enum : uint8_t { LAYER_AURORA = 1, LAYER_DRAP = 2, LAYER_MUF = 4 };
+enum : uint8_t { LAYER_AURORA = 1, LAYER_DRAP = 2, LAYER_MUF = 4, LAYER_APRS = 8 };
 #define LAYERS_DEFAULT LAYER_AURORA
 
 extern Settings g_settings;

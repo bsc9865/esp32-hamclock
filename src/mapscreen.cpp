@@ -13,13 +13,17 @@
 #include "actpanel.h"
 #include "activations.h"
 #include "satpanel.h"
+#include "aprs.h"
 #include "sats.h"
 #include "dxcluster.h"
 #include "net.h"
 #include "ui_theme.h"
 
 static constexpr int W = 800, H = 480;
-static constexpr int MAX_LABELS = 60;
+static constexpr int MAX_LABELS = 80;
+static constexpr int MAX_APRS = 80;
+static AprsStation *aprs_view;   // PSRAM
+static int n_aprs = 0;
 static constexpr float ZOOM_MIN = 1.0f, ZOOM_MAX = 8.0f;
 
 static lv_obj_t *scr, *scr_prev, *img, *slider, *l_zoom, *info_box, *info_lbl;
@@ -70,6 +74,11 @@ static void place_labels() {
       if (!add_label(k, st[i].lat, st[i].lon, v, map_muf_color(st[i].mufd))) break;
     }
   }
+  // APRS-Stationen ab Zoom 4 beschriften
+  if (zoom >= 4.0f)
+    for (int i = 0; i < n_aprs; i++)
+      if (!add_label(k, aprs_view[i].p.lat, aprs_view[i].p.lon, aprs_view[i].p.call,
+                     APRS_COLORS[aprs_category(aprs_view[i].p.sym_table, aprs_view[i].p.sym_code)])) break;
   // Satelliten immer beschriften
   const SatRow *sr;
   int ns = satpanel_rows(&sr);
@@ -81,10 +90,14 @@ static void place_labels() {
 static void render() {
   if (!time_valid()) return;
   uint32_t t0 = millis();
-  static MapSpot ms[100];
+  static MapSpot ms[180];
   int m = dxpanel_map_spots(ms, 50);
   m += actpanel_map_spots(ms + m, 84 - m);
   m += satpanel_map_spots(ms + m, 100 - m);
+  n_aprs = (g_settings.layers & LAYER_APRS) ? aprs_snapshot(aprs_view, MAX_APRS) : 0;
+  for (int i = 0; i < n_aprs && m < 180; i++)
+    ms[m++] = {aprs_view[i].p.lat, aprs_view[i].p.lon,
+               APRS_COLORS[aprs_category(aprs_view[i].p.sym_table, aprs_view[i].p.sym_code)], SHAPE_DOT};
   view = map_view_zoom(W, H, view.lat_c, view.lon_c, zoom);
   last_render = time(nullptr);
   MapOverlays ov;
@@ -96,7 +109,7 @@ static void render() {
   lv_obj_set_pos(img, 0, 0);
   lv_obj_invalidate(img);
   place_labels();
-  seen_seq = dx_seq() + act_seq() + spacewx_seq() + sats_seq() / 6 + propdata_seq();
+  seen_seq = dx_seq() + act_seq() + spacewx_seq() + sats_seq() / 6 + propdata_seq() + aprs_seq() / 10;
   Serial.printf("Vollbild-Karte: Zoom %.1f gerendert in %lu ms\n", zoom, millis() - t0);
 }
 
@@ -153,8 +166,21 @@ static void tap(int x, int y) {
     double d = (sx - x) * (sx - x) + (sy - y) * (sy - y);
     if (d < best_d) { best_d = d; best_sat = i; best = -1; best_act = -1; }
   }
+  int best_aprs = -1;
+  for (int i = 0; i < n_aprs; i++) {
+    double ax, ay;
+    map_view_to_xy(view, aprs_view[i].p.lat, aprs_view[i].p.lon, ax, ay);
+    double d = (ax - x) * (ax - x) + (ay - y) * (ay - y);
+    if (d < best_d) { best_d = d; best_aprs = i; best_sat = -1; best = -1; best_act = -1; }
+  }
   char text[220];
-  if (best_sat >= 0) {
+  if (best_aprs >= 0) {
+    const AprsStation &a = aprs_view[best_aprs];
+    long age = (long)(time(nullptr) - a.t) / 60;
+    snprintf(text, sizeof text, "%s  APRS %s%s  %.0f km  %.0f\xC2\xB0  vor %ld min\n%s",
+             a.p.call, APRS_CAT_NAMES[aprs_category(a.p.sym_table, a.p.sym_code)], a.p.object ? " (Objekt)" : "",
+             gc_distance_km(qlat, qlon, a.p.lat, a.p.lon), gc_bearing_deg(qlat, qlon, a.p.lat, a.p.lon), age, a.p.comment);
+  } else if (best_sat >= 0) {
     satpanel_format(sr[best_sat], text, sizeof text);
     sats_select(sr[best_sat].norad);
   } else if (best_act >= 0) {
@@ -242,13 +268,14 @@ static void on_qth(lv_event_t *) {
 
 static void periodic(lv_timer_t *) {
   time_t now = time(nullptr);
-  if (now - last_render >= 60 || (dx_seq() + act_seq() + spacewx_seq() + sats_seq() / 6 + propdata_seq() != seen_seq && now - last_render >= 15)) render();
+  if (now - last_render >= 60 || (dx_seq() + act_seq() + spacewx_seq() + sats_seq() / 6 + propdata_seq() + aprs_seq() / 10 != seen_seq && now - last_render >= 15)) render();
 }
 
 void mapscreen_open() {
   if (scr) return;
   buf = (uint16_t *)heap_caps_malloc(W * H * 2, MALLOC_CAP_SPIRAM);
   if (!buf) return;
+  if (!aprs_view) aprs_view = (AprsStation *)heap_caps_calloc(MAX_APRS, sizeof(AprsStation), MALLOC_CAP_SPIRAM);
   memset(buf, 0, W * H * 2);
   LatLon q;
   maidenhead_to_latlon(g_settings.loc, q);
@@ -290,9 +317,10 @@ void mapscreen_open() {
 
   // Ebenen: Aurora, D-RAP (umschaltbar, gespeichert)
   static const struct { const char *name; uint8_t bit; uint32_t color; } layer_btns[] = {
-      {"Aurora", LAYER_AURORA, 0x28FF6E}, {"D-RAP", LAYER_DRAP, 0xFF461E}, {"MUF", LAYER_MUF, 0xF5C81E}};
-  for (int i = 0; i < 3; i++) {
-    lv_obj_t *b = mk_btn(8, 306 + i * 54, 110, 44, layer_btns[i].name, nullptr);
+      {"Aurora", LAYER_AURORA, 0x28FF6E}, {"D-RAP", LAYER_DRAP, 0xFF461E}, {"MUF", LAYER_MUF, 0xF5C81E},
+      {"APRS", LAYER_APRS, 0xF97316}};
+  for (int i = 0; i < 4; i++) {
+    lv_obj_t *b = mk_btn(8, 252 + i * 54, 110, 44, layer_btns[i].name, nullptr);
     lv_obj_add_flag(b, LV_OBJ_FLAG_CHECKABLE);
     lv_obj_set_style_bg_color(b, lv_color_hex(layer_btns[i].color), LV_STATE_CHECKED);
     lv_obj_set_style_bg_opa(b, LV_OPA_80, LV_STATE_CHECKED);
@@ -308,7 +336,7 @@ void mapscreen_open() {
 
   // Deckkraft der Aurora (neben dem Aurora-Schalter)
   lv_obj_t *ab = lv_obj_create(scr);
-  lv_obj_set_pos(ab, 124, 306);
+  lv_obj_set_pos(ab, 124, 252);
   lv_obj_set_size(ab, 200, 44);
   lv_obj_set_style_bg_color(ab, lv_color_hex(0x000000), 0);
   lv_obj_set_style_bg_opa(ab, LV_OPA_60, 0);

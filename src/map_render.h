@@ -18,7 +18,7 @@ void map_view_to_xy(const MapView &v, double lat, double lon, double &x, double 
 void map_view_to_latlon(const MapView &v, double x, double y, double &lat, double &lon);
 
 // DX-Station fuer die Karte
-enum MapShape : uint8_t { SHAPE_DX = 0, SHAPE_SQUARE = 1, SHAPE_DIAMOND = 2, SHAPE_SAT = 3 };
+enum MapShape : uint8_t { SHAPE_DX = 0, SHAPE_SQUARE = 1, SHAPE_DIAMOND = 2, SHAPE_SAT = 3, SHAPE_DOT = 4 };
 
 struct MapSpot {
   float lat, lon;

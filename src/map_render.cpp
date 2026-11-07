@@ -377,6 +377,7 @@ static void render_spots(const MapSpot *sp, int n) {
       case SHAPE_SQUARE:  square(x, y, r, k);  square(x, y, r - 1, c); break;
       case SHAPE_DIAMOND: diamond(x, y, r + 2, k); diamond(x, y, r + 1, c); break;
       case SHAPE_SAT:     ring(x, y, r + 4, 4, k); ring(x, y, r + 3, 2, c); disc(x, y, 1, c); break;
+      case SHAPE_DOT:     disc(x, y, 4, k); disc(x, y, 3, c); break;
       default:            disc(x, y, r + 1, k); disc(x, y, r, c); break;
     }
   }

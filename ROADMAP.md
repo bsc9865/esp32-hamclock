@@ -62,6 +62,6 @@ Legende: ✅ fertig · 🔨 in Arbeit · ⬜ geplant · 🟡 vereinfacht machbar
 - ⬜ Kontest-Kalender, DXpeditionen
 
 ## Phase 9: Extras
-- 🟡 APRS-IS-Stationen auf der Karte
-- 🟡 Wetter am QTH (Open-Meteo)
+- ✅ APRS-IS-Stationen auf der Karte (Umkreis 150 km)
+- ✅ Wetter am QTH (Open-Meteo) mit Gewitterwarnung
 - ❌ EmComm-Dashboard (FEMA/NWS, US-spezifisch), ADS-B-Flugzeuge, Mesh-Netze (vorerst)

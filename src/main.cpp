@@ -12,6 +12,7 @@
 #include "astro.h"
 #include "ota.h"
 #include "weather.h"
+#include "aprs.h"
 
 void setup() {
   Serial.begin(115200);
@@ -28,6 +29,7 @@ void setup() {
   maidenhead_to_latlon(g_settings.loc, q);
   sats_begin(q.lat, q.lon);
   weather_begin(q.lat, q.lon);
+  aprs_begin(q.lat, q.lon);
   ota_begin();
   ui_build();
   Serial.printf("Setup fertig. Freier Speicher: intern %u KB (groesster Block %u KB), PSRAM %u KB\n",

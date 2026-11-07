@@ -7,6 +7,8 @@ Versionierung nach [SemVer](https://semver.org/lang/de/).
 ### Hinzugefügt
 - Wetter am QTH (Open-Meteo, CC BY 4.0, alle 15 min): Temperatur, Wetter und Wind in der Kopfzeile; Gewitterwarnung (jetzt oder in den nächsten 3 h) in Rot
 - Seite „Wetter“ (Antippen der Wetteranzeige): aktuelle Werte, 12 Stunden, 3 Tage
+- APRS-IS (nur Empfang, Login mit pass -1, Umkreis 150 km): Kartenebene „APRS“ in der Vollbild-Karte, Stationen farbig nach Typ (mobil, fest, Digi/Gateway, Wetter), ab Zoom 4 beschriftet, antippbar; Verbindung nur bei eingeschalteter Ebene
+- APRS-Parser für unkomprimierte und komprimierte Positionen, Mic-E und Objekte, mit Host-Test an echten Daten
 ### Geändert
 - Stack des DX-Cluster-Tasks im PSRAM (+6 KB interner RAM)
 

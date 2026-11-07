@@ -44,6 +44,14 @@
 // Ausbreitung: Ionosonden von KC2G (Daten von GIRO/INGV)
 #define URL_KC2G_STATIONS  "https://prop.kc2g.com/api/stations.json"
 
+// APRS-IS (nur Empfang)
+#define APRS_SERVER        "euro.aprs2.net"
+#define APRS_PORT          14580
+#define APRS_LOGIN_SSID    "-13"
+#define APRS_RADIUS_KM     150
+#define APRS_MAX_STATIONS  150
+#define APRS_RETENTION_S   (60 * 60)
+
 // Firmware-Updates aus den GitHub-Releases
 #define URL_GITHUB_LATEST  "https://api.github.com/repos/bsc9865/esp32-hamclock/releases/latest"
 #define OTA_ASSET_NAME     "esp32-hamclock-app.bin"
