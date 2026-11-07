@@ -176,6 +176,34 @@ static void render_daynight(const SunPos &s) {
   }
 }
 
+// ---------- Ebenen: Aurora und D-RAP ----------
+// Raster mit Zellmitten auf ganzen Graden; Zuordnung pro Zeile/Spalte vorberechnet
+static void render_grid_overlay(const uint8_t *grid, int gw, int gh, double lat0, double dlat,
+                                double lon0, double dlon, uint16_t color, int vmin, int vfull) {
+  static int16_t *col = nullptr;
+  static int cap = 0;
+  if (cap < W) { free(col); col = (int16_t *)malloc(W * sizeof(int16_t)); cap = W; }
+  for (int x = 0; x < W; x++) {
+    double lon = norm180(V.lon_c + (x + 0.5 - W / 2.0) * V.dpp);
+    int c = (int)lround((lon - lon0) / dlon);
+    col[x] = (int16_t)(((c % gw) + gw) % gw);
+  }
+  for (int y = 0; y < H; y++) {
+    double lat = V.lat_c - (y + 0.5 - H / 2.0) * V.dpp;
+    if (lat > 90 || lat < -90) continue;
+    int r = (int)lround((lat - lat0) / dlat);
+    if (r < 0 || r >= gh) continue;
+    const uint8_t *row = grid + r * gw;
+    uint16_t *o = &fb[y * W];
+    for (int x = 0; x < W; x++) {
+      int v = row[col[x]];
+      if (v < vmin) continue;
+      int a = v >= vfull ? 22 : 4 + (v - vmin) * 18 / (vfull - vmin);
+      o[x] = blend565(color, o[x], a);
+    }
+  }
+}
+
 // ---------- Gitter ----------
 static void render_grid() {
   const uint16_t c = rgb(200, 220, 255);
@@ -277,7 +305,7 @@ static void render_markers(time_t t, const SunPos &s) {
 }
 
 void map_render(uint16_t *buf, const MapView &v, time_t t, double qth_lat, double qth_lon,
-                const MapSpot *spots, int n_spots) {
+                const MapSpot *spots, int n_spots, const MapOverlays *ov) {
   fb = buf;
   W = v.w;
   H = v.h;
@@ -286,6 +314,10 @@ void map_render(uint16_t *buf, const MapView &v, time_t t, double qth_lat, doubl
   qlon = qth_lon;
   SunPos s = sun_position(t);
   render_daynight(s);
+  if (ov && ov->drap)    // ab 1 MHz beeintraechtigt, voll ab 15 MHz
+    render_grid_overlay(ov->drap, 90, 90, 89, -2, -178, 4, rgb(255, 70, 30), 5, 75);
+  if (ov && ov->aurora)  // ab 5 % Wahrscheinlichkeit, voll ab 50 %
+    render_grid_overlay(ov->aurora, 360, 181, -90, 1, 0, 1, rgb(40, 255, 110), 5, 50);
   render_grid();
   if (spots && n_spots > 0) render_spots(spots, n_spots);
   render_markers(t, s);

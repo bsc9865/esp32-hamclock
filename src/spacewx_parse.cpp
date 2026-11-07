@@ -213,5 +213,5 @@ bool wx_parse_drap(const char *text, uint8_t *grid) {
     }
     line = nl ? nl + 1 : nullptr;
   }
-  return rows >= DRAP_H - 2;
+  return rows >= DRAP_H - 2;   // alle 90 Breitenzeilen
 }

@@ -28,6 +28,15 @@
 #define ACT_REFRESH_S      120
 #define ACT_RETENTION_S    (60 * 60)
 
+// Weltraumwetter (NOAA SWPC)
+#define SWPC               "https://services.swpc.noaa.gov/"
+#define URL_SWPC_KP        SWPC "products/noaa-planetary-k-index.json"
+#define URL_SWPC_SFI       SWPC "products/10cm-flux-30-day.json"
+#define URL_SWPC_XRAY      SWPC "json/goes/primary/xrays-6-hour.json"
+#define URL_SWPC_ALERTS    SWPC "products/alerts.json"
+#define URL_SWPC_AURORA    SWPC "json/ovation_aurora_latest.json"
+#define URL_SWPC_DRAP      SWPC "text/drap_global_frequencies.txt"
+
 #ifndef FW_VERSION
 #define FW_VERSION "dev"
 #endif

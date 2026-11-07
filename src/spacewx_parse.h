@@ -44,7 +44,7 @@ class OvationParser {
 };
 
 // D-RAP: text/drap_global_frequencies.txt
-// Raster 45 Zeilen (Breite 89..-89, Schritt 2) x 90 Spalten (Laenge -178..178, Schritt 4)
+// Raster 90 Zeilen (Breite 89..-89, Schritt 2) x 90 Spalten (Laenge -178..178, Schritt 4)
 // Wert = hoechste beeintraechtigte Frequenz in MHz * 5 (0..255)
-static constexpr int DRAP_W = 90, DRAP_H = 45;
+static constexpr int DRAP_W = 90, DRAP_H = 90;
 bool wx_parse_drap(const char *text, uint8_t *grid);

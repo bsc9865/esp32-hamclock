@@ -46,6 +46,7 @@ void settings_load() {
   copy(s.loc, sizeof s.loc, get_str(p, "loc", LOCATOR));
   copy(s.cluster, sizeof s.cluster, get_str(p, "cluster", DX_CLUSTER_DEFAULT));
   s.band_mask = p.isKey("bands") ? p.getUShort("bands", BAND_MASK_DEFAULT) : BAND_MASK_DEFAULT;
+  s.layers = p.isKey("layers") ? p.getUChar("layers", LAYERS_DEFAULT) : LAYERS_DEFAULT;
   p.end();
 
 #ifdef WIFI_SSID
@@ -76,6 +77,7 @@ bool settings_save(const Settings &s) {
   p.putString("loc", s.loc);
   p.putString("cluster", s.cluster);
   p.putUShort("bands", s.band_mask);
+  p.putUChar("layers", s.layers);
   p.end();
   g_settings = s;
   return ok;
@@ -89,6 +91,15 @@ bool settings_save_band_mask(uint16_t mask) {
   p.putUShort("bands", mask);
   p.end();
   g_settings.band_mask = mask;
+  return true;
+}
+
+bool settings_save_layers(uint8_t layers) {
+  Preferences p;
+  if (!p.begin(NS, false)) return false;
+  p.putUChar("layers", layers);
+  p.end();
+  g_settings.layers = layers;
   return true;
 }
 

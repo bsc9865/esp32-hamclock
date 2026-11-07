@@ -19,6 +19,7 @@
 #include "settings_ui.h"
 #include "dxpanel.h"
 #include "actpanel.h"
+#include "spacewx_ui.h"
 #include "map_render.h"
 
 #include "ui_theme.h"
@@ -130,7 +131,11 @@ static lv_obj_t *solar_cell(lv_obj_t *p, int col, int row, const char *name) {
 }
 
 static void build_solar(lv_obj_t *scr) {
-  lv_obj_t *p = pane(scr, 272, 44, 258, 142, "Sonne / Geomagnetik");
+  lv_obj_t *p = pane(scr, 272, 44, 258, 142, "Sonne / Geomagnetik  " LV_SYMBOL_RIGHT);
+  // Antippen oeffnet die Seite "Weltraumwetter"
+  lv_obj_add_flag(p, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_set_style_bg_color(p, lv_color_hex(0x1A2433), LV_STATE_PRESSED);
+  lv_obj_add_event_cb(p, [](lv_event_t *) { spacewx_ui_open(); }, LV_EVENT_CLICKED, nullptr);
   l_sfi  = solar_cell(p, 0, 0, "SFI");
   l_ssn  = solar_cell(p, 1, 0, "SSN");
   l_a    = solar_cell(p, 0, 1, "A");

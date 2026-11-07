@@ -37,8 +37,8 @@ Legende: ✅ fertig · 🔨 in Arbeit · ⬜ geplant · 🟡 vereinfacht machbar
 - ⬜ WWBOTA
 
 ## Phase 5: Weltraumwetter erweitert
-- ⬜ Kp-, SFI- und X-Ray-Verlaufsdiagramme, SWPC-Alarme
-- 🟡 Aurora-Oval auf der Karte, D-RAP
+- ✅ Kp-, SFI- und X-Ray-Verlaufsdiagramme, SWPC-Meldungen
+- ✅ Aurora-Oval und D-RAP als Kartenebenen
 - 🟡 Sonnenbilder (SDO, als verkleinertes JPEG)
 
 ## Phase 6: Satelliten

@@ -3,6 +3,7 @@
 #include "net.h"
 #include "config.h"
 #include "activations.h"
+#include "spacewx.h"
 
 static SemaphoreHandle_t mtx;
 static SolarData g_solar;
@@ -38,6 +39,12 @@ static Job jobs[] = {
   {job_solar, SOLAR_REFRESH_S, 0},
   {activations_fetch_pota, ACT_REFRESH_S, 0},
   {activations_fetch_wwff, ACT_REFRESH_S, 0},
+  {spacewx_fetch_kp, 15 * 60, 0},
+  {spacewx_fetch_xray, 5 * 60, 0},
+  {spacewx_fetch_alerts, 15 * 60, 0},
+  {spacewx_fetch_drap, 15 * 60, 0},
+  {spacewx_fetch_aurora, 30 * 60, 0},
+  {spacewx_fetch_sfi, 3 * 3600, 0},
 };
 
 static void data_task(void *) {
@@ -59,5 +66,6 @@ static void data_task(void *) {
 void datastore_begin() {
   mtx = xSemaphoreCreateMutex();
   activations_begin();
+  spacewx_begin();
   xTaskCreatePinnedToCore(data_task, "data", 12288, nullptr, 1, nullptr, 0);
 }

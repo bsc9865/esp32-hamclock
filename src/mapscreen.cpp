@@ -3,6 +3,8 @@
 #include <lvgl.h>
 #include <math.h>
 #include "map_render.h"
+#include "spacewx.h"
+#include "settings.h"
 #include "astro.h"
 #include "settings.h"
 #include "spots.h"
@@ -66,11 +68,14 @@ static void render() {
   m += actpanel_map_spots(ms + m, 100 - m);
   view = map_view_zoom(W, H, view.lat_c, view.lon_c, zoom);
   last_render = time(nullptr);
-  map_render(buf, view, last_render, qlat, qlon, ms, m);
+  MapOverlays ov;
+  if (g_settings.layers & LAYER_AURORA) ov.aurora = spacewx_aurora();
+  if (g_settings.layers & LAYER_DRAP) ov.drap = spacewx_drap();
+  map_render(buf, view, last_render, qlat, qlon, ms, m, &ov);
   lv_obj_set_pos(img, 0, 0);
   lv_obj_invalidate(img);
   place_labels();
-  seen_seq = dx_seq() + act_seq();
+  seen_seq = dx_seq() + act_seq() + spacewx_seq();
   Serial.printf("Vollbild-Karte: Zoom %.1f gerendert in %lu ms\n", zoom, millis() - t0);
 }
 
@@ -175,7 +180,7 @@ static lv_obj_t *mk_btn(int x, int y, int w, int h, const char *txt, lv_event_cb
   lv_obj_set_style_border_opa(b, LV_OPA_40, 0);
   lv_obj_set_style_border_width(b, 1, 0);
   lv_obj_set_style_shadow_width(b, 0, 0);
-  lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, nullptr);
+  if (cb) lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, nullptr);
   lv_obj_t *l = lv_label_create(b);
   lv_label_set_text(l, txt);
   lv_obj_center(l);
@@ -203,7 +208,7 @@ static void on_qth(lv_event_t *) {
 
 static void periodic(lv_timer_t *) {
   time_t now = time(nullptr);
-  if (now - last_render >= 60 || (dx_seq() + act_seq() != seen_seq && now - last_render >= 15)) render();
+  if (now - last_render >= 60 || (dx_seq() + act_seq() + spacewx_seq() != seen_seq && now - last_render >= 15)) render();
 }
 
 void mapscreen_open() {
@@ -248,6 +253,24 @@ void mapscreen_open() {
   }
 
   mk_btn(8, 8, 120, 40, LV_SYMBOL_LEFT "  Zurueck", on_back);
+
+  // Ebenen: Aurora, D-RAP (umschaltbar, gespeichert)
+  static const struct { const char *name; uint8_t bit; uint32_t color; } layer_btns[] = {
+      {"Aurora", LAYER_AURORA, 0x28FF6E}, {"D-RAP", LAYER_DRAP, 0xFF461E}};
+  for (int i = 0; i < 2; i++) {
+    lv_obj_t *b = mk_btn(8, 360 + i * 54, 110, 44, layer_btns[i].name, nullptr);
+    lv_obj_add_flag(b, LV_OBJ_FLAG_CHECKABLE);
+    lv_obj_set_style_bg_color(b, lv_color_hex(layer_btns[i].color), LV_STATE_CHECKED);
+    lv_obj_set_style_bg_opa(b, LV_OPA_80, LV_STATE_CHECKED);
+    lv_obj_set_style_text_color(b, lv_color_hex(0x000000), LV_STATE_CHECKED);
+    if (g_settings.layers & layer_btns[i].bit) lv_obj_add_state(b, LV_STATE_CHECKED);
+    lv_obj_add_event_cb(b, [](lv_event_t *e) {
+      uint8_t bit = (uint8_t)(uintptr_t)lv_event_get_user_data(e);
+      bool on = lv_obj_has_state(lv_event_get_target(e), LV_STATE_CHECKED);
+      settings_save_layers(on ? (g_settings.layers | bit) : (g_settings.layers & ~bit));
+      render();
+    }, LV_EVENT_VALUE_CHANGED, (void *)(uintptr_t)layer_btns[i].bit);
+  }
   mk_btn(136, 8, 100, 40, LV_SYMBOL_HOME "  QTH", on_qth);
 
   // Zoom: Plus, Regler, Minus (rechts)
@@ -273,8 +296,8 @@ void mapscreen_open() {
   update_zoom_label();
 
   info_box = lv_obj_create(scr);
-  lv_obj_set_size(info_box, 700, LV_SIZE_CONTENT);
-  lv_obj_set_pos(info_box, 12, H - 70);
+  lv_obj_set_size(info_box, 600, LV_SIZE_CONTENT);
+  lv_obj_set_pos(info_box, 128, H - 70);
   lv_obj_set_style_bg_color(info_box, lv_color_hex(0x000000), 0);
   lv_obj_set_style_bg_opa(info_box, LV_OPA_70, 0);
   lv_obj_set_style_border_width(info_box, 0, 0);

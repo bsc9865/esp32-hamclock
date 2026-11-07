@@ -2,6 +2,8 @@
 #include <Arduino.h>
 #include <math.h>
 #include "map_render.h"
+#include "spacewx.h"
+#include "settings.h"
 #include "astro.h"
 #include "mapscreen.h"
 
@@ -29,7 +31,10 @@ const MapSpot *worldmap_spots(int &n) {
 
 void worldmap_render(time_t t) {
   uint32_t t0 = millis();
-  map_render(fb, view, t, qlat, qlon, map_spots, n_map_spots);
+  MapOverlays ov;
+  if (g_settings.layers & LAYER_AURORA) ov.aurora = spacewx_aurora();
+  if (g_settings.layers & LAYER_DRAP) ov.drap = spacewx_drap();
+  map_render(fb, view, t, qlat, qlon, map_spots, n_map_spots, &ov);
   lv_obj_invalidate(img);
   static bool first = true;
   if (first) { Serial.printf("Karte gerendert in %lu ms\n", millis() - t0); first = false; }

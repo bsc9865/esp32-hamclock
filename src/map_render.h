@@ -26,6 +26,12 @@ struct MapSpot {
   uint8_t shape;     // SHAPE_DX: Punkt mit Grosskreis-Pfad; sonst Marker ohne Pfad
 };
 
-// Rendert Tag/Nacht-Karte, Gitter, Spots (Grosskreis-Pfade) und Marker in buf (v.w x v.h, RGB565)
+// Zusaetzliche Kartenebenen (nullptr = aus)
+struct MapOverlays {
+  const uint8_t *aurora = nullptr;   // 360 x 181, Wahrscheinlichkeit 0..100 (Zeile 0 = -90 Grad)
+  const uint8_t *drap = nullptr;     // 90 x 90, MHz*5 (Zeile 0 = 89 Grad, Spalte 0 = -178 Grad)
+};
+
+// Rendert Tag/Nacht-Karte, Ebenen, Gitter, Spots (Grosskreis-Pfade) und Marker in buf (v.w x v.h, RGB565)
 void map_render(uint16_t *buf, const MapView &v, time_t t, double qth_lat, double qth_lon,
-                const MapSpot *spots = nullptr, int n_spots = 0);
+                const MapSpot *spots = nullptr, int n_spots = 0, const MapOverlays *ov = nullptr);

@@ -81,8 +81,10 @@ int main(int argc, char **argv) {
     s = slurp(d + "/drap_global_frequencies.txt");
     std::vector<uint8_t> dg(DRAP_W * DRAP_H);
     bool ok = wx_parse_drap(s.c_str(), dg.data());
-    int dmax = 0;
+    int dmax = 0, south = 0;
     for (auto v : dg) if (v > dmax) dmax = v;
+    for (int i = DRAP_W * DRAP_H / 2; i < DRAP_W * DRAP_H; i++) south += dg[i];
+    CHECK(dg[(DRAP_H - 1) * DRAP_W] > 0 || south > 0, "DRAP Suedhalbkugel leer");
     printf("D-RAP: %s, Maximum %.1f MHz\n", ok ? "ok" : "FEHLER", dmax / 5.0);
     CHECK(ok, "DRAP");
   }

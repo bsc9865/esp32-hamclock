@@ -76,3 +76,45 @@ bool http_get(const char *url, String &out) {
   http.end();
   return ok;
 }
+
+bool http_stream(const char *url, http_chunk_cb cb, void *ctx) {
+  if (!net_connected()) return false;
+  WiFiClientSecure secure;
+  WiFiClient plain;
+  HTTPClient http;
+  if (strncmp(url, "https", 5) == 0) {
+    secure.setInsecure();
+    http.begin(secure, url);
+  } else {
+    http.begin(plain, url);
+  }
+  http.setTimeout(15000);
+  http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
+  http.setUserAgent("ESP32-HamClock/" FW_VERSION);
+  int code = http.GET();
+  if (code != HTTP_CODE_OK) {
+    Serial.printf("HTTP %d fuer %s\n", code, url);
+    http.end();
+    return false;
+  }
+  int remaining = http.getSize();   // -1 bei chunked
+  WiFiClient *s = http.getStreamPtr();
+  static char buf[1460];
+  uint32_t last = millis();
+  while (http.connected() && (remaining > 0 || remaining == -1)) {
+    size_t avail = s->available();
+    if (avail) {
+      int n = s->readBytes(buf, avail > sizeof buf ? sizeof buf : avail);
+      if (n > 0) {
+        cb(buf, n, ctx);
+        if (remaining > 0) remaining -= n;
+        last = millis();
+      }
+    } else {
+      if (millis() - last > 15000) break;
+      delay(2);
+    }
+  }
+  http.end();
+  return remaining <= 0;
+}

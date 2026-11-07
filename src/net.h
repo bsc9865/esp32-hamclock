@@ -11,3 +11,7 @@ bool time_valid();              // NTP synchronisiert?
 
 // HTTP(S)-GET, Ergebnis in out. Liefert true bei HTTP 200.
 bool http_get(const char *url, String &out);
+
+// HTTP(S)-GET als Stream: cb wird fuer jeden empfangenen Block aufgerufen (fuer grosse Antworten)
+typedef void (*http_chunk_cb)(const char *data, size_t len, void *ctx);
+bool http_stream(const char *url, http_chunk_cb cb, void *ctx);
