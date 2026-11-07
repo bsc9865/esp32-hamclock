@@ -4,6 +4,14 @@ Alle wichtigen Änderungen an diesem Projekt. Format nach [Keep a Changelog](htt
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unreleased]
+### Hinzugefügt
+- Satelliten: Bahnberechnung mit SGP4 (Vallado-Kern, MIT), TLE-Daten von CelesTrak (Gruppe „amateur“), im Dateisystem zwischengespeichert und höchstens alle 12 h neu geladen
+- Reiter „Sat“: sichtbare Satelliten mit Elevation/Azimut, nächste Überflüge über dem QTH mit Uhrzeit und maximaler Höhe; Antippen zeigt AOS/Max/LOS mit Richtungen und Dauer und wählt den Satelliten aus
+- Auswahl der Favoriten (bis 16) aus allen Amateurfunk-Satelliten, im NVS gespeichert; Voreinstellung: ISS, SO-50, RS-44, AO-7, FO-29, AO-73, IO-117, AO-123, QO-100, CAS-9, LilacSat-2
+- Karte: Satelliten als Ringe (grün = über dem Horizont), ausgewählter Satellit mit Bodenspur und Ausleuchtzone; Vollbild-Karte mit Namen, antippbar
+- Überflugvorhersage gegen Skyfield geprüft (≤ 1 s, ≤ 0,1°), Host-Test in der CI
+### Geändert
+- Rechte Spalte mit vier Reitern: DX, Aktiv, Sat, Sonne
 
 ## [0.6.0] - 2026-11-07
 ### Hinzugefügt

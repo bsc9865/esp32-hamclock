@@ -42,7 +42,8 @@ Legende: ✅ fertig · 🔨 in Arbeit · ⬜ geplant · 🟡 vereinfacht machbar
 - 🟡 Sonnenbilder (SDO, als verkleinertes JPEG)
 
 ## Phase 6: Satelliten
-- ⬜ SGP4-Tracking (TLE von CelesTrak/AMSAT), Bahn und Footprint auf der Karte, nächste Überflüge
+- ✅ SGP4-Tracking (TLE von CelesTrak), Bodenspur und Ausleuchtzone auf der Karte, nächste Überflüge
+- ⬜ Doppler-Korrektur und Frequenzen je Satellit, Polardiagramm des Überflugs
 
 ## Phase 7: Ausbreitung
 - 🟡 MUF-Karte / Ionosonden-Daten (KC2G)

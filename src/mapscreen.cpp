@@ -11,6 +11,8 @@
 #include "dxpanel.h"
 #include "actpanel.h"
 #include "activations.h"
+#include "satpanel.h"
+#include "sats.h"
 #include "dxcluster.h"
 #include "net.h"
 #include "ui_theme.h"
@@ -57,6 +59,11 @@ static void place_labels() {
     for (int i = 0; i < m; i++)
       if (!add_label(k, ac[i].lat, ac[i].lon, ac[i].call, ACT_COLORS[ac[i].type])) break;
   }
+  // Satelliten immer beschriften
+  const SatRow *sr;
+  int ns = satpanel_rows(&sr);
+  for (int i = 0; i < ns; i++)
+    if (sr[i].valid && !add_label(k, sr[i].st.lat, sr[i].st.lon, sr[i].name, sr[i].st.el > 0 ? 0x4ADE80 : 0xE5E7EB)) break;
   for (; k < MAX_LABELS; k++) lv_obj_add_flag(labels[k], LV_OBJ_FLAG_HIDDEN);
 }
 
@@ -64,19 +71,21 @@ static void render() {
   if (!time_valid()) return;
   uint32_t t0 = millis();
   static MapSpot ms[100];
-  int m = dxpanel_map_spots(ms, 60);
-  m += actpanel_map_spots(ms + m, 100 - m);
+  int m = dxpanel_map_spots(ms, 50);
+  m += actpanel_map_spots(ms + m, 84 - m);
+  m += satpanel_map_spots(ms + m, 100 - m);
   view = map_view_zoom(W, H, view.lat_c, view.lon_c, zoom);
   last_render = time(nullptr);
   MapOverlays ov;
   if (g_settings.layers & LAYER_AURORA) ov.aurora = spacewx_aurora();
   ov.aurora_pct = g_settings.aurora_pct;
+  satpanel_overlays(ov);
   if (g_settings.layers & LAYER_DRAP) ov.drap = spacewx_drap();
   map_render(buf, view, last_render, qlat, qlon, ms, m, &ov);
   lv_obj_set_pos(img, 0, 0);
   lv_obj_invalidate(img);
   place_labels();
-  seen_seq = dx_seq() + act_seq() + spacewx_seq();
+  seen_seq = dx_seq() + act_seq() + spacewx_seq() + sats_seq() / 6;
   Serial.printf("Vollbild-Karte: Zoom %.1f gerendert in %lu ms\n", zoom, millis() - t0);
 }
 
@@ -123,8 +132,21 @@ static void tap(int x, int y) {
     double d = (sx - x) * (sx - x) + (sy - y) * (sy - y);
     if (d < best_d) { best_d = d; best_act = i; best = -1; }
   }
-  char text[200];
-  if (best_act >= 0) {
+  const SatRow *sr;
+  int ns = satpanel_rows(&sr);
+  int best_sat = -1;
+  for (int i = 0; i < ns; i++) {
+    if (!sr[i].valid) continue;
+    double sx, sy;
+    map_view_to_xy(view, sr[i].st.lat, sr[i].st.lon, sx, sy);
+    double d = (sx - x) * (sx - x) + (sy - y) * (sy - y);
+    if (d < best_d) { best_d = d; best_sat = i; best = -1; best_act = -1; }
+  }
+  char text[220];
+  if (best_sat >= 0) {
+    satpanel_format(sr[best_sat], text, sizeof text);
+    sats_select(sr[best_sat].norad);
+  } else if (best_act >= 0) {
     actpanel_format(ac[best_act], text, sizeof text);
   } else if (best >= 0) {
     dxpanel_format_spot(sp[best], text, sizeof text);
@@ -209,7 +231,7 @@ static void on_qth(lv_event_t *) {
 
 static void periodic(lv_timer_t *) {
   time_t now = time(nullptr);
-  if (now - last_render >= 60 || (dx_seq() + act_seq() + spacewx_seq() != seen_seq && now - last_render >= 15)) render();
+  if (now - last_render >= 60 || (dx_seq() + act_seq() + spacewx_seq() + sats_seq() / 6 != seen_seq && now - last_render >= 15)) render();
 }
 
 void mapscreen_open() {

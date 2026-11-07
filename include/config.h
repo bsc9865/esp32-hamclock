@@ -37,6 +37,10 @@
 #define URL_SWPC_AURORA    SWPC "json/ovation_aurora_latest.json"
 #define URL_SWPC_DRAP      SWPC "text/drap_global_frequencies.txt"
 
+// Satelliten (CelesTrak bittet: dieselben Daten hoechstens alle 2 h abrufen)
+#define URL_CELESTRAK_AMATEUR "https://celestrak.org/NORAD/elements/gp.php?GROUP=amateur&FORMAT=tle"
+#define TLE_REFRESH_S      (12 * 3600)
+
 #ifndef FW_VERSION
 #define FW_VERSION "dev"
 #endif

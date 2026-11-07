@@ -276,6 +276,25 @@ static void diamond(int cx, int cy, int r, uint16_t c) {
       if (abs(dx) + abs(dy) <= r) px(cx + dx, cy + dy, c);
 }
 
+// Linienzug aus Geo-Koordinaten (Spruenge ueber den Kartenrand werden ausgelassen)
+static void polyline(const float *lat, const float *lon, int n, bool closed, uint16_t c, uint32_t w) {
+  if (n < 2) return;
+  int x0, y0, xs, ys;
+  to_px(lat[0], lon[0], x0, y0);
+  xs = x0; ys = y0;
+  int jump = (int)(180.0 / V.dpp);
+  for (int i = 1; i < n; i++) {
+    int x1, y1;
+    to_px(lat[i], lon[i], x1, y1);
+    if (abs(x1 - x0) < jump) {
+      line(x0, y0, x1, y1, c, w);
+      line(x0, y0 + 1, x1, y1 + 1, c, w / 2);   // etwas kraeftiger
+    }
+    x0 = x1; y0 = y1;
+  }
+  if (closed && abs(xs - x0) < jump) line(x0, y0, xs, ys, c, w);
+}
+
 static void render_spots(const MapSpot *sp, int n) {
   int r = V.dpp < 0.2 ? 5 : 3;
   for (int i = n - 1; i >= 0; i--)   // aelteste zuerst, neueste oben
@@ -287,6 +306,7 @@ static void render_spots(const MapSpot *sp, int n) {
     switch (sp[i].shape) {
       case SHAPE_SQUARE:  square(x, y, r, k);  square(x, y, r - 1, c); break;
       case SHAPE_DIAMOND: diamond(x, y, r + 2, k); diamond(x, y, r + 1, c); break;
+      case SHAPE_SAT:     ring(x, y, r + 4, 4, k); ring(x, y, r + 3, 2, c); disc(x, y, 1, c); break;
       default:            disc(x, y, r + 1, k); disc(x, y, r, c); break;
     }
   }
@@ -324,6 +344,8 @@ void map_render(uint16_t *buf, const MapView &v, time_t t, double qth_lat, doubl
   if (ov && ov->aurora)  // ab 5 % Wahrscheinlichkeit, voll ab 50 %
     render_grid_overlay(ov->aurora, 360, 181, -90, 1, 0, 1, rgb(40, 255, 110), 5, 50, ov->aurora_pct);
   render_grid();
+  if (ov && ov->fp_n > 2) polyline(ov->fp_lat, ov->fp_lon, ov->fp_n, true, rgb(255, 255, 255), 22);
+  if (ov && ov->trk_n > 1) polyline(ov->trk_lat, ov->trk_lon, ov->trk_n, false, rgb(255, 220, 0), 26);
   if (spots && n_spots > 0) render_spots(spots, n_spots);
   render_markers(t, s);
 }

@@ -6,6 +6,7 @@
 #include "settings.h"
 #include "astro.h"
 #include "mapscreen.h"
+#include "satpanel.h"
 
 static uint16_t *fb;            // Kartenpuffer im PSRAM (RGB565)
 static lv_img_dsc_t dsc;
@@ -34,6 +35,7 @@ void worldmap_render(time_t t) {
   MapOverlays ov;
   if (g_settings.layers & LAYER_AURORA) ov.aurora = spacewx_aurora();
   ov.aurora_pct = g_settings.aurora_pct;
+  satpanel_overlays(ov);
   if (g_settings.layers & LAYER_DRAP) ov.drap = spacewx_drap();
   map_render(fb, view, t, qlat, qlon, map_spots, n_map_spots, &ov);
   lv_obj_invalidate(img);

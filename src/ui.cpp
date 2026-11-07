@@ -19,6 +19,7 @@
 #include "settings_ui.h"
 #include "dxpanel.h"
 #include "actpanel.h"
+#include "satpanel.h"
 #include "spacewx_ui.h"
 #include "map_render.h"
 
@@ -165,7 +166,7 @@ static void build_map(lv_obj_t *scr) {
 }
 
 // Rechte Spalte mit zwei Reitern: DX-Spots | Sonne/Mond
-static constexpr int TABS = 3;
+static constexpr int TABS = 4;
 static lv_obj_t *tab_btn[TABS], *tab_pane[TABS];
 
 static void select_tab(int i) {
@@ -183,11 +184,12 @@ static void select_tab(int i) {
 static void tab_clicked(lv_event_t *e) { select_tab((int)(intptr_t)lv_event_get_user_data(e)); }
 
 static void build_info(lv_obj_t *scr) {
-  static const char *names[TABS] = {"DX", "Aktiv", "Sonne"};
+  static const char *names[TABS] = {"DX", "Aktiv", "Sat", "Sonne"};
   for (int i = 0; i < TABS; i++) {
     lv_obj_t *b = lv_btn_create(scr);
-    lv_obj_set_pos(b, 570 + i * 76, 192);
-    lv_obj_set_size(b, 72, 30);
+    lv_obj_set_pos(b, 570 + i * 57, 192);
+    lv_obj_set_size(b, 53, 30);
+    lv_obj_set_style_pad_hor(b, 2, 0);
     lv_obj_set_style_radius(b, 6, 0);
     lv_obj_set_style_shadow_width(b, 0, 0);
     lv_obj_set_style_bg_color(b, C_PANE, 0);
@@ -209,8 +211,11 @@ static void build_info(lv_obj_t *scr) {
   // Reiter 1: Aktivierungen (POTA/WWFF)
   actpanel_create(tab_pane[1], 210, qth.lat, qth.lon);
 
-  // Reiter 2: Sonne & Mond
-  lv_obj_t *p = tab_pane[2];
+  // Reiter 2: Satelliten
+  satpanel_create(tab_pane[2], 210);
+
+  // Reiter 3: Sonne & Mond
+  lv_obj_t *p = tab_pane[3];
   const lv_font_t *f = &lv_font_montserrat_16;
   label(p, f, C_DIM, 0, 0, LV_SYMBOL_UP " Aufg.");
   l_rise = label(p, f, C_TEXT, 90, 0, "--:--");
@@ -329,6 +334,7 @@ static void timer_fast(lv_timer_t *) {
   update_clock();
   dxpanel_update();
   actpanel_update();
+  satpanel_update();
 }
 
 // Karte jede Minute neu berechnen (sobald die Uhrzeit gueltig ist)
@@ -338,11 +344,13 @@ static void timer_map(lv_timer_t *) {
   if (!time_valid()) return;
   time_t now = time(nullptr);
   bool spots = (dxpanel_map_dirty() || actpanel_map_dirty()) && now - last >= 15;
-  if (now - last >= 60 || spots) {
+  bool sats = satpanel_map_dirty() && now - last >= 30;   // Satelliten wandern langsam ueber die Karte
+  if (now - last >= 60 || spots || sats) {
     last = now;
     static MapSpot ms[100];
-    int n = dxpanel_map_spots(ms, 60);
-    n += actpanel_map_spots(ms + n, 100 - n);
+    int n = dxpanel_map_spots(ms, 50);
+    n += actpanel_map_spots(ms + n, 84 - n);
+    n += satpanel_map_spots(ms + n, 100 - n);
     worldmap_set_spots(ms, n);
     worldmap_render(now);
   }

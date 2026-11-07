@@ -3,6 +3,7 @@
 #include <time.h>
 #include <stdint.h>
 #include "sgp4unit.h"
+#undef pi   // Makro aus sgp4unit.h kollidiert mit Bezeichnern in anderen Headern
 
 struct Observer { double lat, lon, alt_km; };
 
