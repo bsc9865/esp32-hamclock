@@ -4,11 +4,14 @@ Alle wichtigen Änderungen an diesem Projekt. Format nach [Keep a Changelog](htt
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unreleased]
+
+## [0.11.0] - 2026-11-07
 ### Hinzugefügt
 - Statusseite im Heimnetz (http://esp32-hamclock.local, JSON unter /status.json): Version, Laufzeit, Neustart-Grund, Speicher mit Tiefstständen, Task-Stacks, WLAN, DX-Cluster/APRS, Zustand aller Datenquellen
 - Neustart-Grund in der Infospalte (rot bei Absturz/Watchdog); Protokoll gescheiterter Speicheranforderungen und Speicher-Tiefststände mit Zuordnung zum laufenden Abruf
 ### Geändert
-- Vollbild-Karte schneller: Tag- bzw. Nachtbild wird nur noch dort gelesen, wo es gebraucht wird (Ergebnis bitgenau gleich); schrittweises Rendern (erst schnell, nach 0,5 s Ruhe geglättet)
+- Vollbild-Karte schneller: Tag- bzw. Nachtbild wird nur noch dort gelesen, wo es gebraucht wird (Ergebnis bitgenau gleich); schrittweises Rendern (erst schnell, nach 0,5 s Ruhe geglättet); Zoom 8: erstes Bild nach 286 statt ca. 640 ms, geglättet 479 ms
+- Langzeittest 3,5 h: kein Absturz, kein Speicherleck, keine Abruffehler
 
 ## [0.10.0] - 2026-11-07
 ### Hinzugefügt
