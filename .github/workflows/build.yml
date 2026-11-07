@@ -41,6 +41,7 @@ jobs:
           c++ -std=c++17 -O2 -w -Isrc -Ilib/sgp4core/src test/host/test_satellite.cpp src/satellite.cpp lib/sgp4core/src/*.cpp -o test_satellite && ./test_satellite
           c++ -std=c++17 -O2 -Isrc test/host/test_propagation.cpp src/propagation.cpp src/astro.cpp src/timeutil.cpp -o test_propagation && ./test_propagation
           c++ -std=c++17 -Isrc test/host/test_aprs.cpp src/aprs_parse.cpp src/astro.cpp -o test_aprs && ./test_aprs
+          c++ -std=c++17 -Isrc test/host/test_watch.cpp src/watch.cpp src/cty.cpp cty_data.o -o test_watch && ./test_watch
 
       - name: PlatformIO installieren
         run: pip install platformio esptool

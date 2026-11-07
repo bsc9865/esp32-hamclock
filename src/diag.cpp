@@ -11,6 +11,7 @@
 #include "dxcluster.h"
 #include "aprs.h"
 #include "ota.h"
+#include "webconfig.h"
 
 static esp_reset_reason_t reason;
 extern uint32_t mapscreen_last_fast_ms, mapscreen_last_smooth_ms;
@@ -226,7 +227,7 @@ static String status_html() {
     UBaseType_t w = uxTaskGetStackHighWaterMark(th);
     h += "<tr><td>" + String(t) + "</td><td" + (w < 1024 ? " class=bad" : "") + ">" + String(w) + "</td></tr>";
   }
-  h += "</table><p class=dim>Aktualisiert sich alle 30 s &middot; <a href=/status.json style='color:#38bdf8'>status.json</a></p></body></html>";
+  h += "</table><p class=dim>Aktualisiert sich alle 30 s &middot; <a href=/config style='color:#38bdf8'>Einstellungen</a> &middot; <a href=/status.json style='color:#38bdf8'>status.json</a></p></body></html>";
   return h;
 }
 
@@ -244,6 +245,7 @@ static void web_task(void *) {
     heap_caps_print_heap_info(MALLOC_CAP_INTERNAL);
     server->send(200, "text/plain", "Heap-Info auf Serial ausgegeben\n");
   });
+  webconfig_register(*server);
   server->onNotFound([] { server->send(404, "text/plain", "nicht gefunden"); });
   server->begin();
   Serial.printf("Statusseite: http://%s.local/ bzw. http://%s/\n", HOSTNAME, net_ip().c_str());

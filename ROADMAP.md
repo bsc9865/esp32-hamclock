@@ -27,7 +27,7 @@ Legende: ✅ fertig · 🔨 in Arbeit · ⬜ geplant · 🟡 vereinfacht machbar
 ## Phase 3: DX-Cluster
 - ✅ Telnet-DX-Cluster (DXSpider), Spot-Liste, Spots auf der Karte, Großkreis-Pfade
 - ✅ Bandfilter
-- ⬜ Filter: Mode, Watchlist
+- ✅ Mode-Filter und Watchlist mit Hinweis
 - ✅ Rufzeichen-Präfix → Land/Entfernung/Richtung (cty.dat)
 - 🟡 RBN-Spots
 
@@ -54,7 +54,7 @@ Legende: ✅ fertig · 🔨 in Arbeit · ⬜ geplant · 🟡 vereinfacht machbar
 - ✅ Einstellungen am Touchscreen (WLAN-Suche, Passwort, Rufzeichen, Locator), gespeichert im NVS
 - ⬜ Weitere Einstellungen: Themes, Einheiten, Zeitzone, DX-Cluster-Server
 - ✅ OTA-Update über WLAN (ArduinoOTA) und aus den GitHub-Releases
-- ⬜ Web-Konfigurationsseite
+- ✅ Statusseite und Web-Konfigurationsseite
 - ⬜ WSJT-X-Decodes über UDP im LAN
 - 🟡 PSKReporter (MQTT)
 - 🟡 Logbuch (auf SD-Karte, ADIF-Export), Worked-Before

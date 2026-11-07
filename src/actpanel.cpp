@@ -6,6 +6,7 @@
 #include "astro.h"
 #include "map_render.h"
 #include "worldmap.h"
+#include "watch.h"
 
 static constexpr int ROWS = 11;
 static constexpr int ROW_H = 19;
@@ -118,6 +119,11 @@ void actpanel_create(lv_obj_t *p, int w, double qth_lat, double qth_lon) {
 
 static void refresh() {
   n_items = act_snapshot(items, MAX_ITEMS, type_mask, g_settings.band_mask);
+  // Mode-Filter
+  int k = 0;
+  for (int i = 0; i < n_items; i++)
+    if (g_settings.mode_mask & mode_class(items[i].mode)) items[k++] = items[i];
+  n_items = k;
   for (int i = 0; i < ROWS; i++) {
     Row &r = rows[i];
     if (i >= n_items) { lv_obj_add_flag(r.box, LV_OBJ_FLAG_HIDDEN); continue; }
@@ -138,7 +144,9 @@ static void refresh() {
 
 void actpanel_update() {
   uint32_t sq = act_seq();
-  bool bands_changed = g_settings.band_mask != seen_bands;
+  static uint8_t seen_modes = 0xFF;
+  bool bands_changed = g_settings.band_mask != seen_bands || g_settings.mode_mask != seen_modes;
+  seen_modes = g_settings.mode_mask;
   if (force || bands_changed || (sq != seen_seq && millis() - last_refresh > 2000) ||
       millis() - last_refresh > 30000) {
     if (sq != seen_seq || force || bands_changed) map_dirty = true;

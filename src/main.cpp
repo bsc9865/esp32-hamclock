@@ -42,6 +42,7 @@ void setup() {
 }
 
 void loop() {
+  settings_apply_pending();
   ota_loop();
   lv_timer_handler();
   delay(5);

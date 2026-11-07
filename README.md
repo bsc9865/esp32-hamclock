@@ -52,6 +52,13 @@ esptool --chip esp32s3 write-flash 0x0 esp32-hamclock-factory.bin
 
 Beim ersten Start öffnet sich die Einstellungsseite: WLAN auswählen, Passwort, Rufzeichen und Locator eingeben, speichern. Später erreichst du sie über das Zahnrad oben rechts.
 
+## Im Browser
+
+- **Status:** http://esp32-hamclock.local/ (bzw. die IP-Adresse) – Speicher, Datenquellen, Neustart-Grund
+- **Einstellungen:** http://esp32-hamclock.local/config – Benutzer `admin`, Kennwort = OTA-Passwort
+
+Hinweis: Unter macOS dauert die Namensauflösung von `.local` ohne IPv6 bei manchen Programmen 5 s; die IP-Adresse antwortet sofort.
+
 ## Projektstruktur
 
 ```

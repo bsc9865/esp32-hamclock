@@ -46,6 +46,8 @@ void settings_load() {
   copy(s.loc, sizeof s.loc, get_str(p, "loc", LOCATOR));
   copy(s.cluster, sizeof s.cluster, get_str(p, "cluster", DX_CLUSTER_DEFAULT));
   copy(s.ota_pw, sizeof s.ota_pw, get_str(p, "otapw", ""));
+  copy(s.watch, sizeof s.watch, get_str(p, "watch", ""));
+  s.mode_mask = p.isKey("modes") ? p.getUChar("modes", 0x0F) : 0x0F;
   bool has_otapw = p.isKey("otapw");
   s.band_mask = p.isKey("bands") ? p.getUShort("bands", BAND_MASK_DEFAULT) : BAND_MASK_DEFAULT;
   s.layers = p.isKey("layers") ? p.getUChar("layers", LAYERS_DEFAULT) : LAYERS_DEFAULT;
@@ -93,6 +95,8 @@ bool settings_save(const Settings &s) {
   p.putUChar("layers", s.layers);
   p.putUChar("aurpct", s.aurora_pct);
   p.putString("otapw", s.ota_pw);
+  p.putString("watch", s.watch);
+  p.putUChar("modes", s.mode_mask);
   p.end();
   g_settings = s;
   return ok;
@@ -136,4 +140,29 @@ bool settings_cluster_hostport(char *host, size_t n, uint16_t &port) {
   host[len] = 0;
   port = colon ? (uint16_t)atoi(colon + 1) : 7300;
   return port != 0;
+}
+
+// ---------- Uebernahme aus anderen Tasks ----------
+static Settings pending;
+static volatile bool pending_set = false, pending_restart = false;
+static volatile uint32_t applied_seq = 0;
+
+void settings_request(const Settings &s, bool restart) {
+  pending = s;
+  pending_restart = restart;
+  pending_set = true;
+}
+
+uint32_t settings_seq() { return applied_seq; }
+
+void settings_apply_pending() {
+  if (!pending_set) return;
+  pending_set = false;
+  settings_save(pending);
+  applied_seq++;
+  Serial.println("Einstellungen: uebernommen (Web)");
+  if (pending_restart) {
+    delay(800);   // Antwortseite noch ausliefern lassen
+    ESP.restart();
+  }
 }
