@@ -7,3 +7,12 @@ void datastore_begin();     // startet den Abruf-Task
 
 uint32_t solar_seq();       // erhoeht sich bei jedem neuen Datensatz
 SolarData solar_get();
+
+// Zustand der Abrufe (fuer die Statusseite)
+struct JobInfo {
+  const char *name;
+  time_t last_ok;
+  uint32_t ok, fail, last_ms, interval_s;
+};
+int datastore_jobs(JobInfo *out, int max);
+const char *datastore_current_job();   // gerade laufender Abruf (Diagnose)

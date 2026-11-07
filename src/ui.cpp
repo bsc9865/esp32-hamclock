@@ -25,6 +25,7 @@
 #include "ota.h"
 #include "weather.h"
 #include "weather_ui.h"
+#include "diag.h"
 #include "map_render.h"
 
 #include "ui_theme.h"
@@ -257,7 +258,7 @@ static void build_info(lv_obj_t *scr) {
   snprintf(t, sizeof t, "QTH %s", g_settings.loc);
   label(p, &lv_font_montserrat_12, C_DIM, 0, 194, t);
   l_stand = label(p, &lv_font_montserrat_12, C_DIM, 70, 194, "Daten: --");
-  l_mem = label(p, &lv_font_montserrat_12, C_DIM, 0, 212, "");
+  l_mem = label(p, &lv_font_montserrat_12, C_DIM, 0, 206, "");
 
   select_tab(0);
 }
@@ -381,9 +382,8 @@ static void update_mem() {
   uint32_t mi = heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL) / 1024;
   uint32_t fp = heap_caps_get_free_size(MALLOC_CAP_SPIRAM) / 1024;
   uint32_t up = millis() / 60000;
-  set_text(l_mem, "RAM %lu K (min %lu)  PSRAM %lu K  %luh%02lu",
-           fi, mi, fp, up / 60, up % 60);
-  lv_obj_set_style_text_color(l_mem, mi < 30 ? C_POOR : mi < 60 ? C_FAIR : C_DIM, 0);
+  set_text(l_mem, "RAM %lu K (min %lu)  %luh%02lu\nNeustart: %s", fi, mi, up / 60, up % 60, diag_reset_reason());
+  lv_obj_set_style_text_color(l_mem, (mi < 30 || diag_reset_was_crash()) ? C_POOR : mi < 45 ? C_FAIR : C_DIM, 0);
   static uint32_t last_log = 0;
   if (millis() - last_log >= 5 * 60000UL || last_log == 0) {
     last_log = millis();
