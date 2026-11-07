@@ -179,7 +179,14 @@ static void render_daynight(const SunPos &s) {
 // ---------- Ebenen: Aurora und D-RAP ----------
 // Raster mit Zellmitten auf ganzen Graden; Zuordnung pro Zeile/Spalte vorberechnet
 static void render_grid_overlay(const uint8_t *grid, int gw, int gh, double lat0, double dlat,
-                                double lon0, double dlon, uint16_t color, int vmin, int vfull) {
+                                double lon0, double dlon, uint16_t color, int vmin, int vfull, int pct = 100) {
+  // Alpha-Tabelle je Rasterwert (0..32), mit Deckkraft skaliert
+  uint8_t alpha[256];
+  for (int v = 0; v < 256; v++) {
+    int a = v < vmin ? 0 : (v >= vfull ? 22 : 4 + (v - vmin) * 18 / (vfull - vmin));
+    a = a * pct / 100;
+    alpha[v] = (uint8_t)(a > 32 ? 32 : a);
+  }
   static int16_t *col = nullptr;
   static int cap = 0;
   if (cap < W) { free(col); col = (int16_t *)malloc(W * sizeof(int16_t)); cap = W; }
@@ -196,10 +203,8 @@ static void render_grid_overlay(const uint8_t *grid, int gw, int gh, double lat0
     const uint8_t *row = grid + r * gw;
     uint16_t *o = &fb[y * W];
     for (int x = 0; x < W; x++) {
-      int v = row[col[x]];
-      if (v < vmin) continue;
-      int a = v >= vfull ? 22 : 4 + (v - vmin) * 18 / (vfull - vmin);
-      o[x] = blend565(color, o[x], a);
+      uint8_t a = alpha[row[col[x]]];
+      if (a) o[x] = blend565(color, o[x], a);
     }
   }
 }
@@ -317,7 +322,7 @@ void map_render(uint16_t *buf, const MapView &v, time_t t, double qth_lat, doubl
   if (ov && ov->drap)    // ab 1 MHz beeintraechtigt, voll ab 15 MHz
     render_grid_overlay(ov->drap, 90, 90, 89, -2, -178, 4, rgb(255, 70, 30), 5, 75);
   if (ov && ov->aurora)  // ab 5 % Wahrscheinlichkeit, voll ab 50 %
-    render_grid_overlay(ov->aurora, 360, 181, -90, 1, 0, 1, rgb(40, 255, 110), 5, 50);
+    render_grid_overlay(ov->aurora, 360, 181, -90, 1, 0, 1, rgb(40, 255, 110), 5, 50, ov->aurora_pct);
   render_grid();
   if (spots && n_spots > 0) render_spots(spots, n_spots);
   render_markers(t, s);

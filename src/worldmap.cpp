@@ -33,6 +33,7 @@ void worldmap_render(time_t t) {
   uint32_t t0 = millis();
   MapOverlays ov;
   if (g_settings.layers & LAYER_AURORA) ov.aurora = spacewx_aurora();
+  ov.aurora_pct = g_settings.aurora_pct;
   if (g_settings.layers & LAYER_DRAP) ov.drap = spacewx_drap();
   map_render(fb, view, t, qlat, qlon, map_spots, n_map_spots, &ov);
   lv_obj_invalidate(img);

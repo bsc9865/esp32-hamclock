@@ -29,6 +29,7 @@ struct MapSpot {
 // Zusaetzliche Kartenebenen (nullptr = aus)
 struct MapOverlays {
   const uint8_t *aurora = nullptr;   // 360 x 181, Wahrscheinlichkeit 0..100 (Zeile 0 = -90 Grad)
+  uint8_t aurora_pct = 100;          // Deckkraft der Aurora in Prozent (20..200)
   const uint8_t *drap = nullptr;     // 90 x 90, MHz*5 (Zeile 0 = 89 Grad, Spalte 0 = -178 Grad)
 };
 

@@ -70,6 +70,7 @@ static void render() {
   last_render = time(nullptr);
   MapOverlays ov;
   if (g_settings.layers & LAYER_AURORA) ov.aurora = spacewx_aurora();
+  ov.aurora_pct = g_settings.aurora_pct;
   if (g_settings.layers & LAYER_DRAP) ov.drap = spacewx_drap();
   map_render(buf, view, last_render, qlat, qlon, ms, m, &ov);
   lv_obj_set_pos(img, 0, 0);
@@ -271,6 +272,29 @@ void mapscreen_open() {
       render();
     }, LV_EVENT_VALUE_CHANGED, (void *)(uintptr_t)layer_btns[i].bit);
   }
+
+  // Deckkraft der Aurora (neben dem Aurora-Schalter)
+  lv_obj_t *ab = lv_obj_create(scr);
+  lv_obj_set_pos(ab, 124, 360);
+  lv_obj_set_size(ab, 200, 44);
+  lv_obj_set_style_bg_color(ab, lv_color_hex(0x000000), 0);
+  lv_obj_set_style_bg_opa(ab, LV_OPA_60, 0);
+  lv_obj_set_style_border_width(ab, 0, 0);
+  lv_obj_set_style_pad_hor(ab, 14, 0);
+  lv_obj_set_style_pad_ver(ab, 0, 0);
+  lv_obj_clear_flag(ab, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_t *as = lv_slider_create(ab);
+  lv_obj_set_size(as, 168, 12);
+  lv_obj_center(as);
+  lv_slider_set_range(as, 20, 200);
+  lv_slider_set_value(as, g_settings.aurora_pct, LV_ANIM_OFF);
+  lv_obj_set_ext_click_area(as, 14);
+  lv_obj_set_style_bg_color(as, lv_color_hex(0x28FF6E), LV_PART_INDICATOR);
+  lv_obj_set_style_bg_color(as, lv_color_hex(0x28FF6E), LV_PART_KNOB);
+  lv_obj_add_event_cb(as, [](lv_event_t *e) {
+    settings_save_aurora_pct((uint8_t)lv_slider_get_value(lv_event_get_target(e)));
+    if (g_settings.layers & LAYER_AURORA) render();
+  }, LV_EVENT_RELEASED, nullptr);
   mk_btn(136, 8, 100, 40, LV_SYMBOL_HOME "  QTH", on_qth);
 
   // Zoom: Plus, Regler, Minus (rechts)

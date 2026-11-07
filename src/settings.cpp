@@ -47,6 +47,7 @@ void settings_load() {
   copy(s.cluster, sizeof s.cluster, get_str(p, "cluster", DX_CLUSTER_DEFAULT));
   s.band_mask = p.isKey("bands") ? p.getUShort("bands", BAND_MASK_DEFAULT) : BAND_MASK_DEFAULT;
   s.layers = p.isKey("layers") ? p.getUChar("layers", LAYERS_DEFAULT) : LAYERS_DEFAULT;
+  s.aurora_pct = p.isKey("aurpct") ? p.getUChar("aurpct", 100) : 100;
   p.end();
 
 #ifdef WIFI_SSID
@@ -78,6 +79,7 @@ bool settings_save(const Settings &s) {
   p.putString("cluster", s.cluster);
   p.putUShort("bands", s.band_mask);
   p.putUChar("layers", s.layers);
+  p.putUChar("aurpct", s.aurora_pct);
   p.end();
   g_settings = s;
   return ok;
@@ -100,6 +102,15 @@ bool settings_save_layers(uint8_t layers) {
   p.putUChar("layers", layers);
   p.end();
   g_settings.layers = layers;
+  return true;
+}
+
+bool settings_save_aurora_pct(uint8_t pct) {
+  Preferences p;
+  if (!p.begin(NS, false)) return false;
+  p.putUChar("aurpct", pct);
+  p.end();
+  g_settings.aurora_pct = pct;
   return true;
 }
 

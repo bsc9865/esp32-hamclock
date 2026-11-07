@@ -7,6 +7,7 @@ Versionierung nach [SemVer](https://semver.org/lang/de/).
 ### Hinzugefügt
 - Seite „Weltraumwetter“ (Antippen des Sonnen-Panels): Kp-Index 7 Tage als Balken (grün/gelb/rot nach Sturmstufe), GOES-Röntgenfluss 6 h logarithmisch mit A/B/C/M/X-Klassen, Solarflux 30 Tage, SWPC-Meldungen mit Volltext
 - Kartenebenen „Aurora“ (OVATION-Vorhersage) und „D-RAP“ (Absorption), in der Vollbild-Karte schaltbar, gespeichert; Aurora standardmäßig an
+- Deckkraft der Aurora-Ebene per Regler einstellbar (20–200 %), gespeichert
 - Abrufe von NOAA SWPC: Kp (15 min), Röntgen (5 min), Meldungen (15 min), D-RAP (15 min), Aurora (30 min, 920 KB als Stream geparst), SFI (3 h)
 - Host-Tests für alle SWPC-Parser
 
