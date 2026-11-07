@@ -1,0 +1,7 @@
+{
+  "name": "sgp4core",
+  "version": "1.0.3",
+  "description": "SGP4/SDP4-Kern (Vallado) aus Hopperpop/Sgp4-Library, ohne Arduino-Abhaengigkeit",
+  "license": "MIT",
+  "build": { "flags": ["-Wno-unused-variable", "-Wno-unused-but-set-variable", "-Wno-maybe-uninitialized"] }
+}
