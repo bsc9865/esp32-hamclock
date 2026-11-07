@@ -13,6 +13,8 @@
 #include "ota.h"
 
 static esp_reset_reason_t reason;
+extern uint32_t mapscreen_last_fast_ms, mapscreen_last_smooth_ms;
+extern float mapscreen_last_zoom;
 
 // Protokoll gescheiterter Speicheranforderungen (Ringpuffer)
 struct AllocFail { uint32_t ms; uint32_t size; uint32_t caps; char task[12]; };
@@ -120,6 +122,8 @@ static String status_json() {
   j += ",\"dx_state\":" + String((int)dxcluster_state());
   j += ",\"aprs_online\":" + String(aprs_online() ? "true" : "false");
   j += ",\"update\":\"" + String(ota_latest_version()) + "\"";
+  j += ",\"map_render\":{\"zoom\":" + String(mapscreen_last_zoom, 1) + ",\"fast_ms\":" + String(mapscreen_last_fast_ms) +
+       ",\"smooth_ms\":" + String(mapscreen_last_smooth_ms) + "}";
   j += ",\"alloc_fails\":" + String(n_fails) + ",\"alloc_fail_log\":[";
   for (uint32_t i = 0; i < 8 && i < n_fails; i++) {
     const AllocFail &f = fails[(n_fails - 1 - i) % 8];

@@ -89,6 +89,9 @@ static void place_labels() {
 
 static lv_timer_t *refine_timer;
 static bool last_smooth = true;
+// letzte Renderzeiten fuer die Statusseite
+uint32_t mapscreen_last_fast_ms = 0, mapscreen_last_smooth_ms = 0;
+float mapscreen_last_zoom = 0;
 
 static void render(bool smooth = true) {
   if (!time_valid()) return;
@@ -116,7 +119,10 @@ static void render(bool smooth = true) {
   lv_obj_invalidate(img);
   place_labels();
   seen_seq = dx_seq() + act_seq() + spacewx_seq() + sats_seq() / 6 + propdata_seq() + aprs_seq() / 10;
-  Serial.printf("Vollbild-Karte: Zoom %.1f %s in %lu ms\n", zoom, smooth ? "geglaettet" : "schnell", millis() - t0);
+  uint32_t dt = millis() - t0;
+  if (smooth) mapscreen_last_smooth_ms = dt; else mapscreen_last_fast_ms = dt;
+  mapscreen_last_zoom = zoom;
+  Serial.printf("Vollbild-Karte: Zoom %.1f %s in %lu ms\n", zoom, smooth ? "geglaettet" : "schnell", dt);
 }
 
 // Schrittweise: nach Bedienung sofort schnell rendern, nach kurzer Ruhe geglaettet nachzeichnen
