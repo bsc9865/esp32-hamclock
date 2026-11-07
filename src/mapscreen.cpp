@@ -87,9 +87,14 @@ static void place_labels() {
   for (; k < MAX_LABELS; k++) lv_obj_add_flag(labels[k], LV_OBJ_FLAG_HIDDEN);
 }
 
-static void render() {
+static lv_timer_t *refine_timer;
+static bool last_smooth = true;
+
+static void render(bool smooth = true) {
   if (!time_valid()) return;
   uint32_t t0 = millis();
+  map_set_smoothing(smooth);
+  last_smooth = smooth;
   static MapSpot ms[180];
   int m = dxpanel_map_spots(ms, 50);
   m += actpanel_map_spots(ms + m, 84 - m);
@@ -106,11 +111,27 @@ static void render() {
   satpanel_overlays(ov);
   if (g_settings.layers & LAYER_DRAP) ov.drap = spacewx_drap();
   map_render(buf, view, last_render, qlat, qlon, ms, m, &ov);
+  map_set_smoothing(true);
   lv_obj_set_pos(img, 0, 0);
   lv_obj_invalidate(img);
   place_labels();
   seen_seq = dx_seq() + act_seq() + spacewx_seq() + sats_seq() / 6 + propdata_seq() + aprs_seq() / 10;
-  Serial.printf("Vollbild-Karte: Zoom %.1f gerendert in %lu ms\n", zoom, millis() - t0);
+  Serial.printf("Vollbild-Karte: Zoom %.1f %s in %lu ms\n", zoom, smooth ? "geglaettet" : "schnell", millis() - t0);
+}
+
+// Schrittweise: nach Bedienung sofort schnell rendern, nach kurzer Ruhe geglaettet nachzeichnen
+static void render_interactive() {
+  render(zoom < 2.0f);   // bei kleinem Zoom wird ohnehin nicht geglaettet
+  if (zoom >= 2.0f) {
+    if (!refine_timer) {
+      refine_timer = lv_timer_create([](lv_timer_t *t) {
+        lv_timer_pause(t);
+        if (!last_smooth) render(true);
+      }, 500, nullptr);
+    }
+    lv_timer_reset(refine_timer);
+    lv_timer_resume(refine_timer);
+  }
 }
 
 static void update_zoom_label() {
@@ -123,7 +144,7 @@ static void set_zoom(float z) {
   zoom = fminf(ZOOM_MAX, fmaxf(ZOOM_MIN, z));
   lv_slider_set_value(slider, (int)lroundf(zoom * 10), LV_ANIM_OFF);
   update_zoom_label();
-  render();
+  render_interactive();
 }
 
 // ---------- Info ----------
@@ -224,7 +245,7 @@ static void img_event(lv_event_t *e) {
     } else {
       view.lon_c -= drag.x * view.dpp;
       view.lat_c += drag.y * view.dpp;
-      render();
+      render_interactive();
     }
   }
 }
@@ -254,6 +275,7 @@ static void on_back(lv_event_t *) {
 
 static void on_delete(lv_event_t *) {
   lv_timer_del(timer);
+  if (refine_timer) { lv_timer_del(refine_timer); refine_timer = nullptr; }
   lv_timer_del(info_timer);
   heap_caps_free(buf);
   buf = nullptr;
@@ -263,7 +285,7 @@ static void on_delete(lv_event_t *) {
 static void on_qth(lv_event_t *) {
   view.lat_c = qlat;
   view.lon_c = qlon;
-  render();
+  render_interactive();
 }
 
 static void periodic(lv_timer_t *) {
@@ -370,7 +392,7 @@ void mapscreen_open() {
     zoom = lv_slider_get_value(slider) / 10.0f;
     update_zoom_label();
   }, LV_EVENT_VALUE_CHANGED, nullptr);
-  lv_obj_add_event_cb(slider, [](lv_event_t *) { render(); }, LV_EVENT_RELEASED, nullptr);
+  lv_obj_add_event_cb(slider, [](lv_event_t *) { render_interactive(); }, LV_EVENT_RELEASED, nullptr);
   mk_btn(740, 412, 52, 48, LV_SYMBOL_MINUS, [](lv_event_t *) { set_zoom(zoom <= 2 ? zoom - 0.5f : zoom - 1.0f); });
   l_zoom = lv_label_create(scr);
   lv_obj_set_style_text_color(l_zoom, lv_color_hex(0xFFFFFF), 0);

@@ -7,6 +7,8 @@
 
 static constexpr double DEG = M_PI / 180.0;
 static constexpr double SRC_DPP = 360.0 / MAP_SRC_W;   // Grad pro Quellpixel
+static bool smoothing = true;
+void map_set_smoothing(bool on) { smoothing = on; }
 
 static double norm180(double a) {
   a = fmod(a + 180.0, 360.0);
@@ -108,7 +110,7 @@ static void to_px(double lat, double lon, int &x, int &y) {
 // ---------- Tag/Nacht ----------
 static void render_daynight(const SunPos &s) {
   const MapImage day = maps_day(), night = maps_night();
-  const bool bilinear = V.dpp < SRC_DPP * 0.9;   // Vergroesserung -> glaetten
+  const bool bilinear = smoothing && V.dpp < SRC_DPP * 0.9;   // Vergroesserung -> glaetten
 
   // Spalten-Tabellen
   static int16_t *sx = nullptr;
@@ -156,22 +158,24 @@ static void render_daynight(const SunPos &s) {
     float a = sin(lat * DEG) * sd, b = cos(lat * DEG) * cd;
 
     for (int x = 0; x < W; x++) {
+      // Tag/Nacht-Gewicht zuerst: nur im Daemmerungsstreifen werden beide Bilder gebraucht
+      float cz = a + b * coslon[x];
+      int w = (int)((cz - lo) * scale);
       int u0 = sx[x];
-      uint16_t dc, nc;
       if (bilinear) {
         int u1 = u0 + 1 < MAP_SRC_W ? u0 + 1 : 0;
         uint32_t f = fx[x];
-        dc = blend565(blend565(day.pal[d1[u1]], day.pal[d1[u0]], f),
-                      blend565(day.pal[d0[u1]], day.pal[d0[u0]], f), fy);
-        nc = blend565(blend565(night.pal[n1[u1]], night.pal[n1[u0]], f),
-                      blend565(night.pal[n0[u1]], night.pal[n0[u0]], f), fy);
+        uint16_t dc = 0, nc = 0;
+        if (w > 0)
+          dc = blend565(blend565(day.pal[d1[u1]], day.pal[d1[u0]], f),
+                        blend565(day.pal[d0[u1]], day.pal[d0[u0]], f), fy);
+        if (w < 32)
+          nc = blend565(blend565(night.pal[n1[u1]], night.pal[n1[u0]], f),
+                        blend565(night.pal[n0[u1]], night.pal[n0[u0]], f), fy);
+        o[x] = w <= 0 ? nc : (w >= 32 ? dc : blend565(dc, nc, w));
       } else {
-        dc = day.pal[d0[u0]];
-        nc = night.pal[n0[u0]];
+        o[x] = w <= 0 ? night.pal[n0[u0]] : (w >= 32 ? day.pal[d0[u0]] : blend565(day.pal[d0[u0]], night.pal[n0[u0]], w));
       }
-      float cz = a + b * coslon[x];
-      int w = (int)((cz - lo) * scale);
-      o[x] = w <= 0 ? nc : (w >= 32 ? dc : blend565(dc, nc, w));
     }
   }
 }

@@ -43,6 +43,9 @@ struct MapOverlays {
   int fp_n = 0;
 };
 
+// Glaettung beim Vergroessern (bilinear) an/aus; aus = schneller (fuer schrittweises Rendern)
+void map_set_smoothing(bool on);
+
 // Farbe fuer eine MUF in MHz (gleiche Skala wie die Kartenebene), 0xRRGGBB
 uint32_t map_muf_color(float mhz);
 
