@@ -8,6 +8,7 @@ Versionierung nach [SemVer](https://semver.org/lang/de/).
 - Konfigurationsseite im Browser (http://esp32-hamclock.local/config, Kennwort = OTA-Passwort, Benutzer „admin“): Watchlist, Bänder, Modes, Kartenebenen, Aurora-Deckkraft, Station, DX-Cluster, WLAN, OTA-Passwort
 - DX-Watchlist: Rufzeichen (`3Y0J`), Präfix (`VP8*`) oder DXCC-Gebiet (`@Bouvet`, `@3Y/b`); Treffer mit Glockensymbol und in Magenta (Liste und Karte), Hinweis-Banner bei neuem Treffer; Treffer umgehen Band- und Mode-Filter
 - Mode-Filter (CW, SSB, Digi, sonstige) für DX-Spots und Aktivierungen, im Filterfenster und auf der Konfigurationsseite
+- Aktuelle DX-Spots auf der Konfigurationsseite mit Knöpfen „+ Ruf“ und „+ Land“ zum Übernehmen in die Watchlist
 
 ## [0.11.0] - 2026-11-07
 ### Hinzugefügt

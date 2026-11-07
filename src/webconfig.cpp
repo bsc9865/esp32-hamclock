@@ -5,6 +5,8 @@
 #include "settings.h"
 #include "spots.h"
 #include "watch.h"
+#include "dxcluster.h"
+#include "cty.h"
 
 static WebServer *srv;
 
@@ -29,6 +31,63 @@ static bool authorized() {
   return false;
 }
 
+// Eintrag an die Watchlist anhaengen (falls noch nicht vorhanden)
+static bool watch_add(Settings &s, const String &entry) {
+  String list = s.watch;
+  String e = entry;
+  e.trim();
+  if (!e.length()) return false;
+  // schon enthalten? (Eintraege durch Komma/Zeilenumbruch getrennt, ohne Gross-/Kleinschreibung)
+  String low = "," + list + ",";
+  low.replace("\n", ",");
+  low.replace(" ", "");
+  low.toUpperCase();
+  String key = e;
+  key.replace(" ", "");
+  key.toUpperCase();
+  if (low.indexOf("," + key + ",") >= 0) return false;
+  if (list.length() && !list.endsWith(",") && !list.endsWith("\n")) list += ", ";
+  list += e;
+  if (list.length() >= sizeof s.watch) return false;
+  strncpy(s.watch, list.c_str(), sizeof s.watch - 1);
+  s.watch[sizeof s.watch - 1] = 0;
+  return true;
+}
+
+static String spots_table() {
+  static Spot *sp = (Spot *)heap_caps_malloc(DX_MAX_SPOTS * sizeof(Spot), MALLOC_CAP_SPIRAM);
+  int n = dx_snapshot(sp, 60, 0xFFFF);
+  String h;
+  h.reserve(n * 330 + 600);
+  h += F("<fieldset id=spots><legend>Aktuelle DX-Spots</legend>");
+  if (!n) {
+    h += F("<p class=hint>Noch keine Spots empfangen.</p></fieldset>");
+    return h;
+  }
+  h += F("<table><tr><th>UTC</th><th>kHz</th><th>Rufzeichen</th><th>Land</th><th>Mode</th><th>de</th><th></th></tr>");
+  for (int i = 0; i < n; i++) {
+    const Spot &x = sp[i];
+    const CtyEntity *ent = x.ent >= 0 ? &cty_entities[x.ent] : nullptr;
+    bool hit = g_settings.watch[0] && watch_match(g_settings.watch, x.dx, ent);
+    struct tm u;
+    gmtime_r(&x.t, &u);
+    char t[8], f[16];
+    snprintf(t, sizeof t, "%02d%02d", u.tm_hour, u.tm_min);
+    snprintf(f, sizeof f, "%.1f", x.khz);
+    h += hit ? "<tr class=hit>" : "<tr>";
+    h += "<td>" + String(t) + "</td><td>" + f + "</td><td><b>" + esc(x.dx) + "</b></td><td>" +
+         (ent ? esc(ent->name) : String("?")) + "</td><td>" + esc(x.mode) + "</td><td class=hint>" + esc(x.spotter) + "</td><td>";
+    h += "<form method=post action=/watch class=inl><input type=hidden name=e value=\"" + esc(x.dx) +
+         "\"><button class=sm>+ Ruf</button></form>";
+    if (ent)
+      h += "<form method=post action=/watch class=inl><input type=hidden name=e value=\"@" + esc(ent->prefix) +
+           "\"><button class=sm title=\"" + esc(ent->name) + "\">+ Land</button></form>";
+    h += "</td></tr>";
+  }
+  h += F("</table><p class=hint>Neueste zuerst, alle B&auml;nder und Modes. Watchlist-Treffer sind hervorgehoben.</p></fieldset>");
+  return h;
+}
+
 static String checkbox(const char *name, const char *label, bool on) {
   return String("<label class=cb><input type=checkbox name=") + name + (on ? " checked" : "") + "> " + label + "</label>";
 }
@@ -47,7 +106,10 @@ static void page(const char *msg = nullptr, bool ok = true) {
          "textarea{height:90px;font-family:ui-monospace,monospace}.cb{display:inline-block;margin:4px 14px 4px 0}"
          ".hint{color:#7d8b9c;font-size:13px}button{background:#15803d;color:#fff;border:0;border-radius:6px;padding:10px 22px;"
          "font-size:16px;margin-top:8px}.msg{padding:10px;border-radius:6px;margin:10px 0}.ok{background:#14532d}.bad{background:#7f1d1d}"
-         "a{color:#38bdf8}</style></head><body>");
+         "a{color:#38bdf8}table{border-collapse:collapse;width:100%;font-size:14px}td,th{padding:3px 6px;border-bottom:1px solid #263142;"
+         "text-align:left;white-space:nowrap}th{color:#7d8b9c;font-weight:500}tr.hit td{background:#4a1d4f}"
+         ".inl{display:inline;margin:0}button.sm{font-size:12px;padding:3px 8px;margin:0 2px;background:#1e40af}"
+         "#spots{overflow-x:auto}</style></head><body>");
   h += "<h1>Einstellungen " + esc(s.call) + "</h1>";
   if (msg) h += String("<div class='msg ") + (ok ? "ok" : "bad") + "'>" + msg + "</div>";
   if (!s.ota_pw[0])
@@ -90,7 +152,9 @@ static void page(const char *msg = nullptr, bool ok = true) {
          "<label>OTA-Passwort (auch Kennwort dieser Seite)<input type=password name=otapw maxlength=32 placeholder='unver&auml;ndert lassen'></label>"
          "<div class=hint>Leere Passwortfelder lassen das bisherige Passwort unver&auml;ndert.</div></fieldset>");
 
-  h += F("<button type=submit>Speichern</button></form><p class=hint><a href=/>Status</a> &middot; Firmware " FW_VERSION "</p></body></html>");
+  h += F("<button type=submit>Speichern</button></form>");
+  h += spots_table();
+  h += F("<p class=hint><a href=/>Status</a> &middot; Firmware " FW_VERSION "</p></body></html>");
   srv->send(200, "text/html; charset=utf-8", h);
 }
 
@@ -153,8 +217,22 @@ static void handle_post() {
   }
 }
 
+static void handle_watch_add() {
+  Settings s = g_settings;
+  String e = srv->arg("e");
+  bool added = watch_add(s, e);
+  if (added) {
+    settings_request(s, false);
+    delay(150);   // Uebernahme in der Hauptschleife abwarten
+  }
+  String msg = added ? "&bdquo;" + esc(e.c_str()) + "&ldquo; zur Watchlist hinzugef&uuml;gt."
+                     : "&bdquo;" + esc(e.c_str()) + "&ldquo; ist schon in der Watchlist (oder sie ist voll).";
+  page(msg.c_str(), added);
+}
+
 void webconfig_register(WebServer &server) {
   srv = &server;
+  server.on("/watch", HTTP_POST, [] { if (authorized()) handle_watch_add(); });
   server.on("/config", HTTP_GET, [] { if (authorized()) page(); });
   server.on("/config", HTTP_POST, [] { if (authorized()) handle_post(); });
 }
