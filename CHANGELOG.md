@@ -4,6 +4,8 @@ Alle wichtigen Änderungen an diesem Projekt. Format nach [Keep a Changelog](htt
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unreleased]
+
+## [0.6.0] - 2026-11-07
 ### Hinzugefügt
 - Seite „Weltraumwetter“ (Antippen des Sonnen-Panels): Kp-Index 7 Tage als Balken (grün/gelb/rot nach Sturmstufe), GOES-Röntgenfluss 6 h logarithmisch mit A/B/C/M/X-Klassen, Solarflux 30 Tage, SWPC-Meldungen mit Volltext
 - Kartenebenen „Aurora“ (OVATION-Vorhersage) und „D-RAP“ (Absorption), in der Vollbild-Karte schaltbar, gespeichert; Aurora standardmäßig an
