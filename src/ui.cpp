@@ -23,6 +23,8 @@
 #include "spacewx_ui.h"
 #include "prop_ui.h"
 #include "ota.h"
+#include "weather.h"
+#include "weather_ui.h"
 #include "map_render.h"
 
 #include "ui_theme.h"
@@ -87,7 +89,7 @@ static const char *cond_text(Cond c) {
 }
 
 // ---------- Widgets ----------
-static lv_obj_t *l_status;
+static lv_obj_t *l_status, *l_wx;
 static lv_obj_t *l_utc, *l_local, *l_date;
 static lv_obj_t *l_sfi, *l_ssn, *l_a, *l_k, *l_xray, *l_wind, *l_bz, *l_geo;
 static lv_obj_t *l_hf[4][2];
@@ -100,9 +102,18 @@ static void build_header(lv_obj_t *scr) {
   lv_obj_update_layout(call);
   label(scr, &lv_font_montserrat_16, C_DIM, 22 + lv_obj_get_width(call), 14, g_settings.loc);
   l_status = label(scr, &lv_font_montserrat_14, C_DIM, 0, 14);
-  lv_obj_set_width(l_status, 470);
+  lv_obj_set_width(l_status, 330);
   lv_obj_set_style_text_align(l_status, LV_TEXT_ALIGN_RIGHT, 0);
-  lv_obj_set_pos(l_status, 270, 14);
+  lv_label_set_long_mode(l_status, LV_LABEL_LONG_DOT);
+  lv_obj_set_pos(l_status, 410, 14);
+
+  // Wetter am QTH (antippen: Wetterseite)
+  l_wx = label(scr, &lv_font_montserrat_16, C_TEXT, 220, 12, "");
+  lv_obj_set_width(l_wx, 190);
+  lv_label_set_long_mode(l_wx, LV_LABEL_LONG_DOT);
+  lv_obj_add_flag(l_wx, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_set_ext_click_area(l_wx, 10);
+  lv_obj_add_event_cb(l_wx, [](lv_event_t *) { weather_ui_open(); }, LV_EVENT_CLICKED, nullptr);
 
   // Zahnrad: Einstellungen
   lv_obj_t *b = lv_btn_create(scr);
@@ -381,8 +392,22 @@ static void update_mem() {
   }
 }
 
+static void update_weather() {
+  static uint32_t seen = 0xFFFFFFFF;
+  if (weather_seq() == seen) return;
+  seen = weather_seq();
+  Weather w = weather_get();
+  if (!w.valid) return;
+  char b[64];
+  if (w.thunder) snprintf(b, sizeof b, LV_SYMBOL_WARNING " %.0f\xC2\xB0 Gewitter!", w.temp);
+  else snprintf(b, sizeof b, "%.0f\xC2\xB0 %s, %s %.0f", w.temp, wx_code_text(w.code), wx_wind_dir(w.wind_dir), w.wind);
+  lv_label_set_text(l_wx, b);
+  lv_obj_set_style_text_color(l_wx, w.thunder ? C_POOR : C_TEXT, 0);
+}
+
 static void timer_slow(lv_timer_t *) {
   static uint32_t seen_seq = 0;
+  update_weather();
   update_status();
   update_mem();
   update_sun_moon();
