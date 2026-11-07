@@ -4,6 +4,8 @@ Alle wichtigen Änderungen an diesem Projekt. Format nach [Keep a Changelog](htt
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unreleased]
+
+## [0.7.0] - 2026-11-07
 ### Hinzugefügt
 - Satelliten: Bahnberechnung mit SGP4 (Vallado-Kern, MIT), TLE-Daten von CelesTrak (Gruppe „amateur“), im Dateisystem zwischengespeichert und höchstens alle 12 h neu geladen
 - Reiter „Sat“: sichtbare Satelliten mit Elevation/Azimut, nächste Überflüge über dem QTH mit Uhrzeit und maximaler Höhe; Antippen zeigt AOS/Max/LOS mit Richtungen und Dauer und wählt den Satelliten aus
