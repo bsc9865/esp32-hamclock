@@ -4,3 +4,11 @@ include/secrets.h
 *.bin
 .DS_Store
 !assets/*.bin
+
+# vom pioarduino-Hybrid-Build (custom_sdkconfig) erzeugt
+.dummy/
+managed_components/
+sdkconfig.defaults
+sdkconfig.waveshare-s3-lcd7
+sdkconfig.*
+dependencies.lock
