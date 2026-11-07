@@ -14,3 +14,6 @@ struct MapImage {
 // Auf dem ESP32: eingebettete Dateien; auf dem PC: aus Datei geladen
 MapImage maps_day();
 MapImage maps_night();
+
+// Landgrenzen (assets/borders.bin, siehe scripts/gen_borders.py); nullptr wenn nicht vorhanden
+const uint8_t *maps_borders();

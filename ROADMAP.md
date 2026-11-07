@@ -19,7 +19,8 @@ Legende: ✅ fertig · 🔨 in Arbeit · ⬜ geplant · 🟡 vereinfacht machbar
 ## Phase 2: Weltkarte
 - ✅ Flache Karte (äquidistant-zylindrisch) mit Greyline (Tag/Nacht-Terminator)
 - ✅ QTH-Marker, Subsolar-/Sublunarpunkt, Maidenhead-Gitter, Antippen → Locator/Entfernung/Richtung
-- ⬜ CQ/ITU-Zonen, Ländergrenzen
+- ✅ Ländergrenzen (Natural Earth)
+- ⬜ CQ/ITU-Zonen
 - ✅ Vollbild-Karte mit Zoom (1–8×), Verschieben, Spot-Beschriftung
 - 🟡 Azimutale Karte zentriert auf QTH (vorberechnete Projektion)
 - ❌ 3D-Globus (WebGL)

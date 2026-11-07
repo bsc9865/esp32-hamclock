@@ -31,6 +31,7 @@ struct MapOverlays {
   const uint8_t *aurora = nullptr;   // 360 x 181, Wahrscheinlichkeit 0..100 (Zeile 0 = -90 Grad)
   uint8_t aurora_pct = 100;          // Deckkraft der Aurora in Prozent (20..200)
   const uint8_t *drap = nullptr;     // 90 x 90, MHz*5 (Zeile 0 = 89 Grad, Spalte 0 = -178 Grad)
+  bool borders = false;               // Landgrenzen zeichnen
   // MUF-Karte: 180 x 90 (2 Grad, Zeile 0 = 89 Grad N, Spalte 0 = -179 Grad), Wert = MHz * 4
   const uint8_t *muf = nullptr;
   // Ionosonden (Punkte mit Messwert)

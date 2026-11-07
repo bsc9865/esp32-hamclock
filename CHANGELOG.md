@@ -4,6 +4,8 @@ Alle wichtigen Änderungen an diesem Projekt. Format nach [Keep a Changelog](htt
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unreleased]
+### Hinzugefügt
+- Ländergrenzen auf der Karte (Natural Earth 1:50 Mio., gemeinfrei; 392 Linien, 83 KB): standardmäßig an, Schalter „Grenzen“ in der Vollbild-Karte und auf der Konfigurationsseite
 
 ## [0.12.0] - 2026-11-07
 ### Hinzugefügt

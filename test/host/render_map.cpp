@@ -19,7 +19,9 @@ int main(int argc, char **argv) {
                   {64, -18, 0x818CF8}, {40.4f, -3.7f, 0xF472B6}};
   std::vector<uint16_t> buf(w * h);
   MapView v = zoom <= 1.0 && w == 2 * h ? map_view_world(w, h) : map_view_zoom(w, h, lat, lon, zoom);
-  map_render(buf.data(), v, t, q.lat, q.lon, sp, 10);
+  MapOverlays ov;
+  ov.borders = true;
+  map_render(buf.data(), v, t, q.lat, q.lon, sp, 10, &ov);
   FILE *f = fopen(argv[7], "wb");
   fprintf(f, "P6\n%d %d\n255\n", w, h);
   for (uint16_t c : buf) {

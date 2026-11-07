@@ -283,6 +283,43 @@ static void render_ionosondes(const MapOverlays &ov) {
   }
 }
 
+// ---------- Landgrenzen ----------
+static inline int16_t rd16(const uint8_t *p) { return (int16_t)(p[0] | (p[1] << 8)); }
+
+static void render_borders(const uint8_t *b) {
+  if (!b || memcmp(b, "BRD1", 4) != 0) return;
+  int nl = (uint16_t)rd16(b + 4);
+  const uint8_t *p = b + 6;
+  // sichtbarer Bereich (Grad) fuer das schnelle Aussortieren ganzer Linien
+  double lat_top = V.lat_c + V.h / 2.0 * V.dpp, lat_bot = V.lat_c - V.h / 2.0 * V.dpp;
+  double half_w = V.w / 2.0 * V.dpp;
+  bool whole_world = half_w >= 180.0;
+  uint32_t alpha = V.dpp < 0.15 ? 26 : 20;
+  uint16_t c = rgb(255, 236, 190);
+  int jump = (int)(180.0 / V.dpp);
+  for (int i = 0; i < nl; i++) {
+    int n = (uint16_t)rd16(p);
+    double minlat = rd16(p + 2) / 100.0, minlon = rd16(p + 4) / 100.0;
+    double maxlat = rd16(p + 6) / 100.0, maxlon = rd16(p + 8) / 100.0;
+    const uint8_t *pts = p + 10;
+    p = pts + n * 4;
+    if (maxlat < lat_bot || minlat > lat_top) continue;
+    if (!whole_world) {
+      // Laengenabstand der Linienmitte zur Kartenmitte
+      double mid = (minlon + maxlon) / 2.0, half = (maxlon - minlon) / 2.0;
+      if (fabs(norm180(mid - V.lon_c)) > half_w + half) continue;
+    }
+    int x0 = 0, y0 = 0;
+    for (int k = 0; k < n; k++) {
+      int x1, y1;
+      to_px(rd16(pts + k * 4) / 100.0, rd16(pts + k * 4 + 2) / 100.0, x1, y1);
+      if (k > 0 && abs(x1 - x0) < jump) line(x0, y0, x1, y1, c, alpha);
+      x0 = x1;
+      y0 = y1;
+    }
+  }
+}
+
 // ---------- Gitter ----------
 static void render_grid() {
   const uint16_t c = rgb(200, 220, 255);
@@ -420,6 +457,7 @@ void map_render(uint16_t *buf, const MapView &v, time_t t, double qth_lat, doubl
     render_grid_overlay(ov->aurora, 360, 181, -90, 1, 0, 1, rgb(40, 255, 110), 5, 50, ov->aurora_pct);
   if (ov && ov->muf) render_muf(ov->muf);
   render_grid();
+  if (ov && ov->borders) render_borders(maps_borders());
   if (ov && ov->muf && ov->iono_n) render_ionosondes(*ov);
   if (ov && ov->fp_n > 2) polyline(ov->fp_lat, ov->fp_lon, ov->fp_n, true, rgb(255, 255, 255), 22);
   if (ov && ov->trk_n > 1) polyline(ov->trk_lat, ov->trk_lon, ov->trk_n, false, rgb(255, 220, 0), 26);

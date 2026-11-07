@@ -111,6 +111,7 @@ static void render(bool smooth = true) {
   MapOverlays ov;
   if (g_settings.layers & LAYER_AURORA) ov.aurora = spacewx_aurora();
   ov.aurora_pct = g_settings.aurora_pct;
+  ov.borders = !(g_settings.layers & LAYER_HIDE_BORDERS);
   satpanel_overlays(ov);
   if (g_settings.layers & LAYER_DRAP) ov.drap = spacewx_drap();
   map_render(buf, view, last_render, qlat, qlon, ms, m, &ov);
@@ -346,17 +347,19 @@ void mapscreen_open() {
   // Ebenen: Aurora, D-RAP (umschaltbar, gespeichert)
   static const struct { const char *name; uint8_t bit; uint32_t color; } layer_btns[] = {
       {"Aurora", LAYER_AURORA, 0x28FF6E}, {"D-RAP", LAYER_DRAP, 0xFF461E}, {"MUF", LAYER_MUF, 0xF5C81E},
-      {"APRS", LAYER_APRS, 0xF97316}};
-  for (int i = 0; i < 4; i++) {
-    lv_obj_t *b = mk_btn(8, 252 + i * 54, 110, 44, layer_btns[i].name, nullptr);
+      {"APRS", LAYER_APRS, 0xF97316}, {"Grenzen", LAYER_HIDE_BORDERS, 0xFFECBE}};
+  for (int i = 0; i < 5; i++) {
+    lv_obj_t *b = mk_btn(8, 198 + i * 54, 110, 44, layer_btns[i].name, nullptr);
     lv_obj_add_flag(b, LV_OBJ_FLAG_CHECKABLE);
     lv_obj_set_style_bg_color(b, lv_color_hex(layer_btns[i].color), LV_STATE_CHECKED);
     lv_obj_set_style_bg_opa(b, LV_OPA_80, LV_STATE_CHECKED);
     lv_obj_set_style_text_color(b, lv_color_hex(0x000000), LV_STATE_CHECKED);
-    if (g_settings.layers & layer_btns[i].bit) lv_obj_add_state(b, LV_STATE_CHECKED);
+    bool inverted = layer_btns[i].bit == LAYER_HIDE_BORDERS;   // Bit bedeutet "ausgeblendet"
+    if (((g_settings.layers & layer_btns[i].bit) != 0) != inverted) lv_obj_add_state(b, LV_STATE_CHECKED);
     lv_obj_add_event_cb(b, [](lv_event_t *e) {
       uint8_t bit = (uint8_t)(uintptr_t)lv_event_get_user_data(e);
       bool on = lv_obj_has_state(lv_event_get_target(e), LV_STATE_CHECKED);
+      if (bit == LAYER_HIDE_BORDERS) on = !on;
       settings_save_layers(on ? (g_settings.layers | bit) : (g_settings.layers & ~bit));
       render();
     }, LV_EVENT_VALUE_CHANGED, (void *)(uintptr_t)layer_btns[i].bit);
@@ -364,7 +367,7 @@ void mapscreen_open() {
 
   // Deckkraft der Aurora (neben dem Aurora-Schalter)
   lv_obj_t *ab = lv_obj_create(scr);
-  lv_obj_set_pos(ab, 124, 252);
+  lv_obj_set_pos(ab, 124, 198);
   lv_obj_set_size(ab, 200, 44);
   lv_obj_set_style_bg_color(ab, lv_color_hex(0x000000), 0);
   lv_obj_set_style_bg_opa(ab, LV_OPA_60, 0);

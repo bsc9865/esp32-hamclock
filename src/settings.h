@@ -17,7 +17,8 @@ struct Settings {
   uint8_t mode_mask = 0x0F;   // Mode-Filter (MODE_* aus watch.h)
 };
 
-enum : uint8_t { LAYER_AURORA = 1, LAYER_DRAP = 2, LAYER_MUF = 4, LAYER_APRS = 8 };
+// LAYER_HIDE_BORDERS ist umgekehrt gespeichert, damit Grenzen auch bei vorhandenen Einstellungen sichtbar sind
+enum : uint8_t { LAYER_AURORA = 1, LAYER_DRAP = 2, LAYER_MUF = 4, LAYER_APRS = 8, LAYER_HIDE_BORDERS = 16 };
 #define LAYERS_DEFAULT LAYER_AURORA
 
 extern Settings g_settings;

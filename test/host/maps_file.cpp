@@ -23,3 +23,16 @@ MapImage maps_night() {
   static std::vector<uint8_t> b; static uint16_t p[256]; static MapImage m = load("assets/map_night.bin", b, p);
   return m;
 }
+
+const uint8_t *maps_borders() {
+  static std::vector<uint8_t> b;
+  if (b.empty()) {
+    FILE *f = fopen("assets/borders.bin", "rb");
+    if (!f) return nullptr;
+    uint8_t buf[65536];
+    size_t n;
+    while ((n = fread(buf, 1, sizeof buf, f)) > 0) b.insert(b.end(), buf, buf + n);
+    fclose(f);
+  }
+  return b.data();
+}
