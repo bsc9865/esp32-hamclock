@@ -11,6 +11,11 @@ bool ota_check_github();            // aus dem Daten-Task: neueste Release-Versi
 const char *ota_latest_version();   // z.B. "v0.9.0" ("" = unbekannt)
 bool ota_update_available();        // neuer als die laufende Firmware?
 bool ota_install_latest();          // blockierend mit Fortschrittsanzeige; startet bei Erfolg neu
+// Installation vormerken: laeuft dann in ota_loop() ausserhalb von LVGL-Ereignissen
+// (innerhalb eines Klick-Handlers wuerde die Fortschrittsanzeige nicht neu gezeichnet)
+void ota_request_install();
+void ota_request_check();
+bool ota_busy();                    // Pruefung/Installation vorgemerkt oder laufend
 
 // Versionsvergleich "v1.2.3[-...]"; Rueckgabe <0, 0, >0
 int ota_compare_versions(const char *a, const char *b);

@@ -19,6 +19,11 @@ extern const uint8_t crt_bundle_end[] asm("_binary_x509_crt_bundle_end");
 static char latest[24] = "";
 static char asset_url[200] = "";
 static bool ota_started = false;
+static volatile bool req_install = false, req_check = false, busy = false;
+
+void ota_request_install() { req_install = true; }
+void ota_request_check() { req_check = true; }
+bool ota_busy() { return req_install || req_check || busy; }
 
 // ---------- Versionen ----------
 static void parse_ver(const char *s, int v[3], bool &suffix) {
@@ -111,6 +116,18 @@ void ota_begin() {
 }
 
 void ota_loop() {
+  if (req_check) {
+    req_check = false;
+    busy = true;
+    ota_check_github();
+    busy = false;
+  }
+  if (req_install) {
+    req_install = false;
+    busy = true;
+    ota_install_latest();
+    busy = false;
+  }
   if (!ota_started) {
     if (!net_connected()) return;
     if (!g_settings.ota_pw[0]) return;   // ohne Passwort kein Update ueber das Netzwerk

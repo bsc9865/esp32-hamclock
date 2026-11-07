@@ -207,17 +207,29 @@ static void update_fw_ui() {
   lv_obj_set_style_bg_color(btn_fw, avail ? lv_color_hex(0x15803D) : lv_color_hex(0x1E40AF), 0);
 }
 
+static lv_timer_t *fw_timer;
+
+// wartet, bis die vorgemerkte Pruefung (in ota_loop) fertig ist
+static void fw_poll(lv_timer_t *t) {
+  if (ota_busy()) return;
+  lv_timer_del(t);
+  fw_timer = nullptr;
+  if (!scr) return;
+  if (ota_latest_version()[0]) status(ota_update_available() ? "Neue Version gefunden" : "Firmware ist aktuell", C_GOOD);
+  else status("Pruefung fehlgeschlagen", C_POOR);
+  update_fw_ui();
+}
+
 static void on_firmware(lv_event_t *) {
+  if (ota_busy()) return;
   if (ota_update_available()) {
-    status("Update wird installiert ...", C_ACCENT);
-    if (!ota_install_latest()) status("Update fehlgeschlagen", C_POOR);
+    status("Update wird gestartet ...", C_ACCENT);
+    ota_request_install();   // Fortschritt und Ergebnis zeigt die Update-Anzeige
     return;
   }
   status("Pruefe GitHub ...", C_ACCENT);
-  lv_timer_handler();
-  if (ota_check_github()) status(ota_update_available() ? "Neue Version gefunden" : "Firmware ist aktuell", C_GOOD);
-  else status("Pruefung fehlgeschlagen", C_POOR);
-  update_fw_ui();
+  ota_request_check();
+  if (!fw_timer) fw_timer = lv_timer_create(fw_poll, 300, nullptr);
 }
 
 void settings_ui_open() {
@@ -268,9 +280,10 @@ void settings_ui_open() {
 
   // Firmware: Version und Update aus den GitHub-Releases
   l_fw = mk_label(scr, 452, 410, "", &lv_font_montserrat_14, C_DIM);
-  lv_obj_set_width(l_fw, 200);
+  lv_obj_set_width(l_fw, 170);
   lv_label_set_long_mode(l_fw, LV_LABEL_LONG_WRAP);
-  btn_fw = mk_btn(scr, 660, 404, 128, "", on_firmware, lv_color_hex(0x1E40AF));
+  btn_fw = mk_btn(scr, 628, 404, 160, "", on_firmware, lv_color_hex(0x1E40AF));
+  lv_obj_set_style_text_font(lv_obj_get_child(btn_fw, 0), &lv_font_montserrat_16, 0);
   update_fw_ui();
   lv_obj_set_width(l_status, 336);
   lv_label_set_long_mode(l_status, LV_LABEL_LONG_WRAP);
