@@ -48,8 +48,10 @@ static void panel_init() {
   cfg.timings.hsync_back_porch = 8;
   cfg.timings.hsync_front_porch = 8;
   cfg.timings.vsync_pulse_width = 4;
-  cfg.timings.vsync_back_porch = 8;
-  cfg.timings.vsync_front_porch = 8;
+  // laengere vertikale Austastluecke (wie in den Waveshare-Beispielen): mehr Zeit fuer die
+  // automatische DMA-Neusynchronisation in VSYNC (CONFIG_LCD_RGB_RESTART_IN_VSYNC)
+  cfg.timings.vsync_back_porch = 16;
+  cfg.timings.vsync_front_porch = 16;
   cfg.timings.flags.pclk_active_neg = 1;
   cfg.data_width = 16;
   cfg.bits_per_pixel = 16;

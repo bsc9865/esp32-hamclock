@@ -16,6 +16,7 @@ bool ota_install_latest();          // blockierend mit Fortschrittsanzeige; star
 void ota_request_install();
 void ota_request_check();
 bool ota_busy();                    // Pruefung/Installation vorgemerkt oder laufend
+void ota_poll_requests();           // aus dem Daten-Task: vorgemerkte Pruefung ausfuehren
 
 // Versionsvergleich "v1.2.3[-...]"; Rueckgabe <0, 0, >0
 int ota_compare_versions(const char *a, const char *b);

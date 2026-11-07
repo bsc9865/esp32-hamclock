@@ -56,6 +56,7 @@ static Job jobs[] = {
 static void data_task(void *) {
   for (;;) {
     net_poll();
+    ota_poll_requests();
     if (net_connected() && time_valid()) {   // Abrufe erst mit gueltiger Uhrzeit
       uint32_t now = millis();
       for (auto &j : jobs) {

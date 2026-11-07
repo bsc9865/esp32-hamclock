@@ -115,13 +115,17 @@ void ota_begin() {
   });
 }
 
-void ota_loop() {
+// aus dem Daten-Task (Core 0): vorgemerkte Pruefung ausfuehren
+void ota_poll_requests() {
   if (req_check) {
-    req_check = false;
     busy = true;
+    req_check = false;
     ota_check_github();
     busy = false;
   }
+}
+
+void ota_loop() {
   if (req_install) {
     req_install = false;
     busy = true;

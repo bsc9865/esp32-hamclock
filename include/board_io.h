@@ -20,8 +20,14 @@ namespace ioexp {
     Wire.beginTransmission(CH422G_ADDR_MODE);
     Wire.write(0x01);  // IO0-7 als Ausgaenge
     Wire.endTransmission();
-    state = EXIO_LCD_RST | EXIO_USB_SEL | EXIO_SD_CS;  // Backlight aus, Touch im Reset
+    // Display-Reset pulsen: nach einem Software-Neustart (z.B. OTA) laeuft das Panel sonst mit
+    // altem Zustand weiter, waehrend der ESP32 mitten im Bild neu einsetzt (Bild verschoben)
+    state = EXIO_USB_SEL | EXIO_SD_CS;                 // LCD im Reset, Backlight aus, Touch im Reset
     write();
+    delay(10);
+    state |= EXIO_LCD_RST;
+    write();
+    delay(20);
   }
   inline void backlight(bool on) { set(EXIO_LCD_BL, on); }
 }
