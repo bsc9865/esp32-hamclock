@@ -6,6 +6,7 @@
 #include "spacewx.h"
 #include "sats.h"
 #include "propdata.h"
+#include "ota.h"
 
 static SemaphoreHandle_t mtx;
 static SolarData g_solar;
@@ -49,6 +50,7 @@ static Job jobs[] = {
   {spacewx_fetch_sfi, 3 * 3600, 0},
   {sats_fetch_tle, 3600, 0},          // prueft selbst, ob die TLEs aelter als 12 h sind
   {propdata_fetch, 15 * 60, 0},
+  {ota_check_github, 6 * 3600, 0},
 };
 
 static void data_task(void *) {

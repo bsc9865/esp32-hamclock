@@ -53,7 +53,8 @@ Legende: ✅ fertig · 🔨 in Arbeit · ⬜ geplant · 🟡 vereinfacht machbar
 ## Phase 8: Station
 - ✅ Einstellungen am Touchscreen (WLAN-Suche, Passwort, Rufzeichen, Locator), gespeichert im NVS
 - ⬜ Weitere Einstellungen: Themes, Einheiten, Zeitzone, DX-Cluster-Server
-- ⬜ Web-Konfigurationsseite und OTA-Update über WLAN
+- ✅ OTA-Update über WLAN (ArduinoOTA) und aus den GitHub-Releases
+- ⬜ Web-Konfigurationsseite
 - ⬜ WSJT-X-Decodes über UDP im LAN
 - 🟡 PSKReporter (MQTT)
 - 🟡 Logbuch (auf SD-Karte, ADIF-Export), Worked-Before

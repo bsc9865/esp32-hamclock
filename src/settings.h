@@ -12,6 +12,7 @@ struct Settings {
   uint16_t band_mask = 0;     // Bit je Band (siehe spots.h)
   uint8_t layers = 0;         // Kartenebenen (LAYER_*)
   uint8_t aurora_pct = 100;   // Deckkraft der Aurora-Ebene in Prozent (20..200)
+  char ota_pw[33] = "";       // Passwort fuer Updates ueber das Netzwerk (leer = aus)
 };
 
 enum : uint8_t { LAYER_AURORA = 1, LAYER_DRAP = 2, LAYER_MUF = 4 };

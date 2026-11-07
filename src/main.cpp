@@ -10,6 +10,7 @@
 #include "dxcluster.h"
 #include "sats.h"
 #include "astro.h"
+#include "ota.h"
 
 void setup() {
   Serial.begin(115200);
@@ -25,6 +26,7 @@ void setup() {
   LatLon q;
   maidenhead_to_latlon(g_settings.loc, q);
   sats_begin(q.lat, q.lon);
+  ota_begin();
   ui_build();
   Serial.printf("Setup fertig. Freier Speicher: intern %u KB (groesster Block %u KB), PSRAM %u KB\n",
                 heap_caps_get_free_size(MALLOC_CAP_INTERNAL) / 1024,
@@ -33,6 +35,7 @@ void setup() {
 }
 
 void loop() {
+  ota_loop();
   lv_timer_handler();
   delay(5);
 }

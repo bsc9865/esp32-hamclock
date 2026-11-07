@@ -22,6 +22,7 @@
 #include "satpanel.h"
 #include "spacewx_ui.h"
 #include "prop_ui.h"
+#include "ota.h"
 #include "map_render.h"
 
 #include "ui_theme.h"
@@ -274,6 +275,8 @@ static void update_clock() {
 static void update_status() {
   if (!net_configured())
     set_text(l_status, LV_SYMBOL_WARNING " WLAN nicht eingerichtet   " FW_VERSION);
+  else if (net_connected() && ota_update_available())
+    set_text(l_status, LV_SYMBOL_DOWNLOAD " Update %s verfuegbar   " LV_SYMBOL_WIFI " %d dBm   %s", ota_latest_version(), net_rssi(), FW_VERSION);
   else if (net_connected())
     set_text(l_status, LV_SYMBOL_WIFI " %s  %d dBm   %s", net_ip().c_str(), net_rssi(), FW_VERSION);
   else

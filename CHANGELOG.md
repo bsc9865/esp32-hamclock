@@ -4,6 +4,12 @@ Alle wichtigen Änderungen an diesem Projekt. Format nach [Keep a Changelog](htt
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unreleased]
+### Hinzugefügt
+- Firmware-Updates über WLAN: ArduinoOTA mit Passwort (`pio run -t upload --upload-port esp32-hamclock.local`)
+- Update aus den GitHub-Releases am Gerät: Prüfung alle 6 h, Hinweis in der Kopfzeile, Installation in den Einstellungen mit Fortschrittsanzeige; HTTPS mit Zertifikatsprüfung (ESP-IDF-Zertifikatsbündel)
+- OTA-Passwort in den Einstellungen; wird aus `secrets.h` (`OTA_PASSWORD`) einmalig übernommen
+### Geändert
+- Repository ist öffentlich; vom Hybrid-Build erzeugte Dateien wurden aus der Historie entfernt
 
 ## [0.8.0] - 2026-11-07
 ### Hinzugefügt

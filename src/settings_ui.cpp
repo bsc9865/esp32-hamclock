@@ -15,9 +15,10 @@
 #include "settings.h"
 #include "ui_theme.h"
 #include "config.h"
+#include "ota.h"
 
 static lv_obj_t *scr_prev, *scr;
-static lv_obj_t *ta_ssid, *ta_pass, *ta_call, *ta_loc, *ta_cluster;
+static lv_obj_t *ta_ssid, *ta_pass, *ta_call, *ta_loc, *ta_cluster, *ta_otapw, *l_fw, *btn_fw;
 static lv_obj_t *list, *kb, *l_status, *btn_scan;
 static lv_timer_t *scan_timer;
 
@@ -169,6 +170,8 @@ static void on_save(lv_event_t *) {
   if (!*cl || !strchr(cl, '.')) { status("DX-Cluster ungueltig (host:port)", C_POOR); return; }
   strncpy(s.cluster, cl, sizeof s.cluster - 1);
   s.cluster[sizeof s.cluster - 1] = 0;
+  strncpy(s.ota_pw, lv_textarea_get_text(ta_otapw), sizeof s.ota_pw - 1);
+  s.ota_pw[sizeof s.ota_pw - 1] = 0;
   if (!settings_save(s)) { status("Speichern fehlgeschlagen!", C_POOR); return; }
   status("Gespeichert - Neustart ...", C_GOOD);
   lv_timer_create(restart_cb, 800, nullptr);
@@ -189,6 +192,32 @@ static lv_obj_t *mk_btn(lv_obj_t *p, int x, int y, int w, const char *txt, lv_ev
   lv_label_set_text(l, txt);
   lv_obj_center(l);
   return b;
+}
+
+// ---------- Firmware ----------
+static void update_fw_ui() {
+  char buf[96];
+  bool avail = ota_update_available();
+  if (avail) snprintf(buf, sizeof buf, "Firmware " FW_VERSION "\nNeu: %s verfuegbar", ota_latest_version());
+  else if (ota_latest_version()[0]) snprintf(buf, sizeof buf, "Firmware " FW_VERSION "\naktuell (neueste: %s)", ota_latest_version());
+  else snprintf(buf, sizeof buf, "Firmware " FW_VERSION "\nUpdate-Stand unbekannt");
+  lv_label_set_text(l_fw, buf);
+  lv_obj_set_style_text_color(l_fw, avail ? C_GOOD : C_DIM, 0);
+  lv_label_set_text(lv_obj_get_child(btn_fw, 0), avail ? LV_SYMBOL_DOWNLOAD " Installieren" : LV_SYMBOL_REFRESH " Pruefen");
+  lv_obj_set_style_bg_color(btn_fw, avail ? lv_color_hex(0x15803D) : lv_color_hex(0x1E40AF), 0);
+}
+
+static void on_firmware(lv_event_t *) {
+  if (ota_update_available()) {
+    status("Update wird installiert ...", C_ACCENT);
+    if (!ota_install_latest()) status("Update fehlgeschlagen", C_POOR);
+    return;
+  }
+  status("Pruefe GitHub ...", C_ACCENT);
+  lv_timer_handler();
+  if (ota_check_github()) status(ota_update_available() ? "Neue Version gefunden" : "Firmware ist aktuell", C_GOOD);
+  else status("Pruefung fehlgeschlagen", C_POOR);
+  update_fw_ui();
 }
 
 void settings_ui_open() {
@@ -229,9 +258,20 @@ void settings_ui_open() {
   mk_label(scr, 452, 160, "DX-Cluster");
   ta_cluster = mk_ta(scr, 560, 152, 228, g_settings.cluster, 47);
   lv_obj_set_style_text_font(ta_cluster, &lv_font_montserrat_16, 0);
-  mk_btn(scr, 452, 208, 336, LV_SYMBOL_SAVE "  Speichern & Neustart", on_save, lv_color_hex(0x15803D));
-  mk_btn(scr, 452, 264, 336, LV_SYMBOL_CLOSE "  Abbrechen", on_cancel, lv_color_hex(0x374151));
-  l_status = mk_label(scr, 452, 322, "", &lv_font_montserrat_16, C_TEXT);
+  mk_label(scr, 452, 212, "OTA-Passw.");
+  ta_otapw = mk_ta(scr, 560, 204, 228, g_settings.ota_pw, 32);
+  lv_textarea_set_password_mode(ta_otapw, true);
+  lv_obj_set_style_text_font(ta_otapw, &lv_font_montserrat_16, 0);
+  mk_btn(scr, 452, 258, 336, LV_SYMBOL_SAVE "  Speichern & Neustart", on_save, lv_color_hex(0x15803D));
+  mk_btn(scr, 452, 312, 336, LV_SYMBOL_CLOSE "  Abbrechen", on_cancel, lv_color_hex(0x374151));
+  l_status = mk_label(scr, 452, 368, "", &lv_font_montserrat_14, C_TEXT);
+
+  // Firmware: Version und Update aus den GitHub-Releases
+  l_fw = mk_label(scr, 452, 410, "", &lv_font_montserrat_14, C_DIM);
+  lv_obj_set_width(l_fw, 200);
+  lv_label_set_long_mode(l_fw, LV_LABEL_LONG_WRAP);
+  btn_fw = mk_btn(scr, 660, 404, 128, "", on_firmware, lv_color_hex(0x1E40AF));
+  update_fw_ui();
   lv_obj_set_width(l_status, 336);
   lv_label_set_long_mode(l_status, LV_LABEL_LONG_WRAP);
 

@@ -44,6 +44,10 @@
 // Ausbreitung: Ionosonden von KC2G (Daten von GIRO/INGV)
 #define URL_KC2G_STATIONS  "https://prop.kc2g.com/api/stations.json"
 
+// Firmware-Updates aus den GitHub-Releases
+#define URL_GITHUB_LATEST  "https://api.github.com/repos/bsc9865/esp32-hamclock/releases/latest"
+#define OTA_ASSET_NAME     "esp32-hamclock-app.bin"
+
 #ifndef FW_VERSION
 #define FW_VERSION "dev"
 #endif

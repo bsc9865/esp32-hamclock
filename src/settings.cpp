@@ -45,6 +45,8 @@ void settings_load() {
   copy(s.call, sizeof s.call, get_str(p, "call", CALLSIGN));
   copy(s.loc, sizeof s.loc, get_str(p, "loc", LOCATOR));
   copy(s.cluster, sizeof s.cluster, get_str(p, "cluster", DX_CLUSTER_DEFAULT));
+  copy(s.ota_pw, sizeof s.ota_pw, get_str(p, "otapw", ""));
+  bool has_otapw = p.isKey("otapw");
   s.band_mask = p.isKey("bands") ? p.getUShort("bands", BAND_MASK_DEFAULT) : BAND_MASK_DEFAULT;
   s.layers = p.isKey("layers") ? p.getUChar("layers", LAYERS_DEFAULT) : LAYERS_DEFAULT;
   s.aurora_pct = p.isKey("aurpct") ? p.getUChar("aurpct", 100) : 100;
@@ -60,6 +62,16 @@ void settings_load() {
   }
 #else
   (void)has;
+#endif
+#ifdef OTA_PASSWORD
+  // Einmalige Uebernahme des OTA-Passworts aus secrets.h
+  if (!has_otapw && strlen(OTA_PASSWORD) > 0) {
+    copy(s.ota_pw, sizeof s.ota_pw, OTA_PASSWORD);
+    settings_save(s);
+    Serial.println("Einstellungen: OTA-Passwort aus secrets.h uebernommen");
+  }
+#else
+  (void)has_otapw;
 #endif
 
   char loc[7];
@@ -80,6 +92,7 @@ bool settings_save(const Settings &s) {
   p.putUShort("bands", s.band_mask);
   p.putUChar("layers", s.layers);
   p.putUChar("aurpct", s.aurora_pct);
+  p.putString("otapw", s.ota_pw);
   p.end();
   g_settings = s;
   return ok;

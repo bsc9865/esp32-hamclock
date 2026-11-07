@@ -29,6 +29,17 @@ pio run -t upload        # bauen und flashen
 pio device monitor       # serielle Ausgabe
 ```
 
+### Updates über WLAN
+
+- **Am Gerät:** Einstellungen (Zahnrad) → *Prüfen* bzw. *Installieren*. Das Gerät prüft alle 6 Stunden,
+  ob es auf GitHub eine neue Release-Version gibt, und zeigt das in der Kopfzeile an. Die Firmware wird
+  per HTTPS mit Zertifikatsprüfung geladen.
+- **Vom Rechner (Entwicklung):** `OTA_PASSWORD` in `include/secrets.h` setzen (wird beim ersten Start ins
+  Gerät übernommen, alternativ in den Einstellungen eintragen), dann
+  ```bash
+  pio run -t upload --upload-port esp32-hamclock.local
+  ```
+
 ### Fertige Firmware ohne Entwicklungsumgebung
 
 Jedes getaggte Release (`vX.Y.Z`) wird von GitHub Actions gebaut. Unter *Releases* liegt dann:
