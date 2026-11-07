@@ -33,5 +33,3 @@ int act_snapshot(Activation *out, int max, uint8_t type_mask, uint16_t band_mask
 
 // UTF-8 -> ASCII (Umlaute als ae/oe/ue, sonstige Zeichen als '?'); fuer die eingebauten Schriften
 void utf8_to_ascii(const char *in, char *out, size_t n);
-// "2026-11-06T18:20:46" (UTC) -> Unix-Zeit
-time_t parse_iso_utc(const char *s);
