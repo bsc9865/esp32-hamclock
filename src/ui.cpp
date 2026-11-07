@@ -21,6 +21,7 @@
 #include "actpanel.h"
 #include "satpanel.h"
 #include "spacewx_ui.h"
+#include "prop_ui.h"
 #include "map_render.h"
 
 #include "ui_theme.h"
@@ -150,7 +151,11 @@ static void build_solar(lv_obj_t *scr) {
 }
 
 static void build_bands(lv_obj_t *scr) {
-  lv_obj_t *p = pane(scr, 534, 44, 260, 142, "HF-Bedingungen");
+  lv_obj_t *p = pane(scr, 534, 44, 260, 142, "HF-Bedingungen  " LV_SYMBOL_RIGHT);
+  // Antippen oeffnet die Seite "Ausbreitung"
+  lv_obj_add_flag(p, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_set_style_bg_color(p, lv_color_hex(0x1A2433), LV_STATE_PRESSED);
+  lv_obj_add_event_cb(p, [](lv_event_t *) { prop_ui_open(); }, LV_EVENT_CLICKED, nullptr);
   label(p, &lv_font_montserrat_14, C_DIM, 96, 20, "Tag");
   label(p, &lv_font_montserrat_14, C_DIM, 172, 20, "Nacht");
   for (int i = 0; i < 4; i++) {

@@ -4,6 +4,7 @@
 #include <math.h>
 #include "map_render.h"
 #include "spacewx.h"
+#include "propdata.h"
 #include "settings.h"
 #include "astro.h"
 #include "settings.h"
@@ -59,6 +60,16 @@ static void place_labels() {
     for (int i = 0; i < m; i++)
       if (!add_label(k, ac[i].lat, ac[i].lon, ac[i].call, ACT_COLORS[ac[i].type])) break;
   }
+  // Ionosonden mit Messwert (bei eingeschalteter MUF-Ebene)
+  if (g_settings.layers & LAYER_MUF) {
+    const Ionosonde *st;
+    int ni = propdata_stations(&st);
+    char v[12];
+    for (int i = 0; i < ni; i++) {
+      snprintf(v, sizeof v, "%.1f", st[i].mufd);
+      if (!add_label(k, st[i].lat, st[i].lon, v, map_muf_color(st[i].mufd))) break;
+    }
+  }
   // Satelliten immer beschriften
   const SatRow *sr;
   int ns = satpanel_rows(&sr);
@@ -85,7 +96,7 @@ static void render() {
   lv_obj_set_pos(img, 0, 0);
   lv_obj_invalidate(img);
   place_labels();
-  seen_seq = dx_seq() + act_seq() + spacewx_seq() + sats_seq() / 6;
+  seen_seq = dx_seq() + act_seq() + spacewx_seq() + sats_seq() / 6 + propdata_seq();
   Serial.printf("Vollbild-Karte: Zoom %.1f gerendert in %lu ms\n", zoom, millis() - t0);
 }
 
@@ -231,7 +242,7 @@ static void on_qth(lv_event_t *) {
 
 static void periodic(lv_timer_t *) {
   time_t now = time(nullptr);
-  if (now - last_render >= 60 || (dx_seq() + act_seq() + spacewx_seq() + sats_seq() / 6 != seen_seq && now - last_render >= 15)) render();
+  if (now - last_render >= 60 || (dx_seq() + act_seq() + spacewx_seq() + sats_seq() / 6 + propdata_seq() != seen_seq && now - last_render >= 15)) render();
 }
 
 void mapscreen_open() {
@@ -279,9 +290,9 @@ void mapscreen_open() {
 
   // Ebenen: Aurora, D-RAP (umschaltbar, gespeichert)
   static const struct { const char *name; uint8_t bit; uint32_t color; } layer_btns[] = {
-      {"Aurora", LAYER_AURORA, 0x28FF6E}, {"D-RAP", LAYER_DRAP, 0xFF461E}};
-  for (int i = 0; i < 2; i++) {
-    lv_obj_t *b = mk_btn(8, 360 + i * 54, 110, 44, layer_btns[i].name, nullptr);
+      {"Aurora", LAYER_AURORA, 0x28FF6E}, {"D-RAP", LAYER_DRAP, 0xFF461E}, {"MUF", LAYER_MUF, 0xF5C81E}};
+  for (int i = 0; i < 3; i++) {
+    lv_obj_t *b = mk_btn(8, 306 + i * 54, 110, 44, layer_btns[i].name, nullptr);
     lv_obj_add_flag(b, LV_OBJ_FLAG_CHECKABLE);
     lv_obj_set_style_bg_color(b, lv_color_hex(layer_btns[i].color), LV_STATE_CHECKED);
     lv_obj_set_style_bg_opa(b, LV_OPA_80, LV_STATE_CHECKED);
@@ -297,7 +308,7 @@ void mapscreen_open() {
 
   // Deckkraft der Aurora (neben dem Aurora-Schalter)
   lv_obj_t *ab = lv_obj_create(scr);
-  lv_obj_set_pos(ab, 124, 360);
+  lv_obj_set_pos(ab, 124, 306);
   lv_obj_set_size(ab, 200, 44);
   lv_obj_set_style_bg_color(ab, lv_color_hex(0x000000), 0);
   lv_obj_set_style_bg_opa(ab, LV_OPA_60, 0);

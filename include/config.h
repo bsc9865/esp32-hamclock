@@ -41,6 +41,9 @@
 #define URL_CELESTRAK_AMATEUR "https://celestrak.org/NORAD/elements/gp.php?GROUP=amateur&FORMAT=tle"
 #define TLE_REFRESH_S      (12 * 3600)
 
+// Ausbreitung: Ionosonden von KC2G (Daten von GIRO/INGV)
+#define URL_KC2G_STATIONS  "https://prop.kc2g.com/api/stations.json"
+
 #ifndef FW_VERSION
 #define FW_VERSION "dev"
 #endif

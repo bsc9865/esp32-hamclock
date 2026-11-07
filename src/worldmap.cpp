@@ -3,6 +3,7 @@
 #include <math.h>
 #include "map_render.h"
 #include "spacewx.h"
+#include "propdata.h"
 #include "settings.h"
 #include "astro.h"
 #include "mapscreen.h"

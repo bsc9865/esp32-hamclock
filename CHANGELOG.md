@@ -4,6 +4,12 @@ Alle wichtigen Änderungen an diesem Projekt. Format nach [Keep a Changelog](htt
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unreleased]
+### Hinzugefügt
+- Ausbreitungsmodell: MUF(3000) aus aktuellen Ionosonden (KC2G/GIRO, alle 15 min) mit Tagesgang (1 h Verzögerung, Nacht 45 %) und entfernungsgewichteter Interpolation; mittlerer Fehler in der Kreuzvalidierung ca. 4 MHz
+- Seite „Ausbreitung“ (Antippen von „HF-Bedingungen“): Bandprognose 80–10 m in acht Zielgebiete mit Entfernung, Richtung, Pfad-MUF und LUF, für jetzt bis +12 h; nächste Ionosonden mit Messwerten
+- Kartenebene „MUF“: Farbflächen und Konturlinien nach Bandgrenzen, Ionosonden als Punkte (Vollbild: mit Messwert)
+### Behoben
+- Absturz durch `%f` in `lv_label_set_text_fmt`; Gleitkomma im LVGL-printf jetzt eingeschaltet
 
 ## [0.7.0] - 2026-11-07
 ### Hinzugefügt

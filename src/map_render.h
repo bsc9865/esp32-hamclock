@@ -31,12 +31,20 @@ struct MapOverlays {
   const uint8_t *aurora = nullptr;   // 360 x 181, Wahrscheinlichkeit 0..100 (Zeile 0 = -90 Grad)
   uint8_t aurora_pct = 100;          // Deckkraft der Aurora in Prozent (20..200)
   const uint8_t *drap = nullptr;     // 90 x 90, MHz*5 (Zeile 0 = 89 Grad, Spalte 0 = -178 Grad)
+  // MUF-Karte: 180 x 90 (2 Grad, Zeile 0 = 89 Grad N, Spalte 0 = -179 Grad), Wert = MHz * 4
+  const uint8_t *muf = nullptr;
+  // Ionosonden (Punkte mit Messwert)
+  const float *iono_lat = nullptr, *iono_lon = nullptr, *iono_muf = nullptr;
+  int iono_n = 0;
   // Satellit: Bodenspur und Ausleuchtzone (geschlossener Kreis)
   const float *trk_lat = nullptr, *trk_lon = nullptr;
   int trk_n = 0;
   const float *fp_lat = nullptr, *fp_lon = nullptr;
   int fp_n = 0;
 };
+
+// Farbe fuer eine MUF in MHz (gleiche Skala wie die Kartenebene), 0xRRGGBB
+uint32_t map_muf_color(float mhz);
 
 // Rendert Tag/Nacht-Karte, Ebenen, Gitter, Spots (Grosskreis-Pfade) und Marker in buf (v.w x v.h, RGB565)
 void map_render(uint16_t *buf, const MapView &v, time_t t, double qth_lat, double qth_lon,

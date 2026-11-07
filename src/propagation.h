@@ -31,8 +31,11 @@ struct PropModel {
 };
 
 float prop_daylight_factor(double lat, double lon, time_t t);      // f(chi)
-void prop_build(PropModel &m, const Ionosonde *st, int n, time_t t);
+// yield_cb wird nach jeder Rasterzeile aufgerufen (auf dem ESP32: kurz die CPU freigeben)
+void prop_build(PropModel &m, const Ionosonde *st, int n, time_t t, void (*yield_cb)() = nullptr);
 float prop_muf(const PropModel &m, double lat, double lon, time_t t);   // MUF(3000) in MHz
+// MUF-Raster (PROP_GW x PROP_GH, Wert = MHz * 4, max. 63,75 MHz) fuer die Kartenebene
+void prop_muf_grid(const PropModel &m, time_t t, uint8_t *out);
 
 // Bandprognose fuer einen Pfad
 static constexpr int PROP_BANDS = 8;

@@ -14,7 +14,7 @@ struct Settings {
   uint8_t aurora_pct = 100;   // Deckkraft der Aurora-Ebene in Prozent (20..200)
 };
 
-enum : uint8_t { LAYER_AURORA = 1, LAYER_DRAP = 2 };
+enum : uint8_t { LAYER_AURORA = 1, LAYER_DRAP = 2, LAYER_MUF = 4 };
 #define LAYERS_DEFAULT LAYER_AURORA
 
 extern Settings g_settings;

@@ -209,6 +209,76 @@ static void render_grid_overlay(const uint8_t *grid, int gw, int gh, double lat0
   }
 }
 
+// ---------- Ebene: MUF ----------
+// Baender: <7 | 7-10 | 10-14 | 14-18 | 18-21 | 21-24 | 24-28 | >=28 MHz
+static const float MUF_EDGES[7] = {7, 10, 14, 18, 21, 24, 28};
+static const uint32_t MUF_COLORS[8] = {0x3B4BDB, 0x22A6F0, 0x14C8B4, 0x3CD25A, 0xB4DC28, 0xF5C81E, 0xF57D1E, 0xE6283C};
+
+static inline int muf_band(float mhz) {
+  int b = 0;
+  while (b < 7 && mhz >= MUF_EDGES[b]) b++;
+  return b;
+}
+
+uint32_t map_muf_color(float mhz) { return MUF_COLORS[muf_band(mhz)]; }
+
+static void render_muf(const uint8_t *g) {
+  static int16_t *gx0 = nullptr;
+  static uint8_t *gfx = nullptr;
+  static int8_t *prev = nullptr;
+  static int cap = 0;
+  if (cap < W) {
+    free(gx0); free(gfx); free(prev);
+    gx0 = (int16_t *)malloc(W * sizeof(int16_t));
+    gfx = (uint8_t *)malloc(W);
+    prev = (int8_t *)malloc(W);
+    cap = W;
+  }
+  uint16_t col[8];
+  for (int i = 0; i < 8; i++) col[i] = hex565(MUF_COLORS[i]);
+  for (int x = 0; x < W; x++) {
+    double lon = norm180(V.lon_c + (x + 0.5 - W / 2.0) * V.dpp);
+    double fx = (lon + 179.0) / 2.0;
+    if (fx < 0) fx += 180.0;
+    int i0 = (int)fx;
+    gx0[x] = (int16_t)(i0 % 180);
+    gfx[x] = (uint8_t)((fx - i0) * 16);
+    prev[x] = -1;
+  }
+  for (int y = 0; y < H; y++) {
+    double lat = V.lat_c - (y + 0.5 - H / 2.0) * V.dpp;
+    if (lat > 90 || lat < -90) continue;
+    double fy = (89.0 - lat) / 2.0;
+    if (fy < 0) fy = 0;
+    if (fy > 89) fy = 89;
+    int r0 = (int)fy, r1 = r0 < 89 ? r0 + 1 : r0;
+    int ty = (int)((fy - r0) * 16);
+    const uint8_t *a = g + r0 * 180, *b = g + r1 * 180;
+    uint16_t *o = &fb[y * W];
+    int left = -1;
+    for (int x = 0; x < W; x++) {
+      int c0 = gx0[x], c1 = (c0 + 1) % 180, tx = gfx[x];
+      int top = a[c0] * (16 - tx) + a[c1] * tx, bot = b[c0] * (16 - tx) + b[c1] * tx;
+      float mhz = (top * (16 - ty) + bot * ty) / (256.0f * 4.0f);
+      int band = muf_band(mhz);
+      // Konturlinie an Bandgrenzen (links oder oben anderes Band), sonst leichte Flaechenfarbe
+      bool edge = (left >= 0 && band != left) || (prev[x] >= 0 && band != prev[x]);
+      o[x] = blend565(col[band], o[x], edge ? 26 : 9);
+      left = band;
+      prev[x] = (int8_t)band;
+    }
+  }
+}
+
+static void render_ionosondes(const MapOverlays &ov) {
+  for (int i = 0; i < ov.iono_n; i++) {
+    int x, y;
+    to_px(ov.iono_lat[i], ov.iono_lon[i], x, y);
+    disc(x, y, 5, rgb(255, 255, 255));
+    disc(x, y, 4, hex565(map_muf_color(ov.iono_muf[i])));
+  }
+}
+
 // ---------- Gitter ----------
 static void render_grid() {
   const uint16_t c = rgb(200, 220, 255);
@@ -343,7 +413,9 @@ void map_render(uint16_t *buf, const MapView &v, time_t t, double qth_lat, doubl
     render_grid_overlay(ov->drap, 90, 90, 89, -2, -178, 4, rgb(255, 70, 30), 5, 75);
   if (ov && ov->aurora)  // ab 5 % Wahrscheinlichkeit, voll ab 50 %
     render_grid_overlay(ov->aurora, 360, 181, -90, 1, 0, 1, rgb(40, 255, 110), 5, 50, ov->aurora_pct);
+  if (ov && ov->muf) render_muf(ov->muf);
   render_grid();
+  if (ov && ov->muf && ov->iono_n) render_ionosondes(*ov);
   if (ov && ov->fp_n > 2) polyline(ov->fp_lat, ov->fp_lon, ov->fp_n, true, rgb(255, 255, 255), 22);
   if (ov && ov->trk_n > 1) polyline(ov->trk_lat, ov->trk_lon, ov->trk_n, false, rgb(255, 220, 0), 26);
   if (spots && n_spots > 0) render_spots(spots, n_spots);

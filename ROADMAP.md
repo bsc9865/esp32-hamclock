@@ -46,8 +46,8 @@ Legende: ✅ fertig · 🔨 in Arbeit · ⬜ geplant · 🟡 vereinfacht machbar
 - ⬜ Doppler-Korrektur und Frequenzen je Satellit, Polardiagramm des Überflugs
 
 ## Phase 7: Ausbreitung
-- 🟡 MUF-Karte / Ionosonden-Daten (KC2G)
-- 🟡 Vereinfachte Punkt-zu-Punkt-Prognose
+- ✅ MUF-Karte aus Ionosonden-Daten (KC2G/GIRO), vereinfachtes Modell
+- ✅ Vereinfachte Bandprognose in acht Zielgebiete (jetzt bis +12 h)
 - ❌ Volle ITU-R-P.533-Berechnung (WebAssembly, zu rechenintensiv)
 
 ## Phase 8: Station

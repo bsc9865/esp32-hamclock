@@ -78,8 +78,7 @@ int prop_parse_kc2g(const char *json, time_t now, int max_age_s, Ionosonde *out,
 static constexpr int IONO_LAG_S = 3600;
 static constexpr double NIGHT_FLOOR = 0.45;
 
-float prop_daylight_factor(double lat, double lon, time_t t) {
-  SunPos s = sun_position(t - IONO_LAG_S);
+static float daylight_factor(const SunPos &s, double lat, double lon) {
   double H = (s.gmst + lon - s.ra) * DEG;
   double c = sin(lat * DEG) * sin(s.decl * DEG) + cos(lat * DEG) * cos(s.decl * DEG) * cos(H);
   // weicher Uebergang ueber den Terminator (bis ca. 6 Grad unter dem Horizont)
@@ -89,37 +88,52 @@ float prop_daylight_factor(double lat, double lon, time_t t) {
   return (float)(NIGHT_FLOOR + (1.0 - NIGHT_FLOOR) * sqrt(x));
 }
 
+float prop_daylight_factor(double lat, double lon, time_t t) {
+  return daylight_factor(sun_position(t - IONO_LAG_S), lat, lon);
+}
+
 static double gc_km(double la1, double lo1, double la2, double lo2) {
   double c = sin(la1 * DEG) * sin(la2 * DEG) + cos(la1 * DEG) * cos(la2 * DEG) * cos((lo2 - lo1) * DEG);
   return acos(c > 1 ? 1 : (c < -1 ? -1 : c)) * RE;
 }
 
-void prop_build(PropModel &m, const Ionosonde *st, int n, time_t t) {
+void prop_build(PropModel &m, const Ionosonde *st, int n, time_t t, void (*yield_cb)()) {
   m.valid = n > 0;
   m.n_stations = n;
   if (!n) return;
-  float r[128];
   if (n > 128) n = 128;
+  // Stationen als Einheitsvektoren; Entfernung ueber die Sehne (keine Winkelfunktionen pro Paar)
+  float r[128], sx[128], sy[128], sz[128];
   double sum = 0;
   for (int i = 0; i < n; i++) {
     r[i] = st[i].mufd / prop_daylight_factor(st[i].lat, st[i].lon, st[i].t ? st[i].t : t);
     sum += r[i];
+    float la = st[i].lat * (float)DEG, lo = st[i].lon * (float)DEG;
+    sx[i] = cosf(la) * cosf(lo);
+    sy[i] = cosf(la) * sinf(lo);
+    sz[i] = sinf(la);
   }
   m.r_mean = (float)(sum / n);
-  const double w0 = 1.0 / (3500.0 * 3500.0);   // Gewicht des globalen Mittelwerts (wirkt fern der Stationen)
+  const float RE_F = (float)RE;
+  const float soft2 = 800.0f * 800.0f;          // 800 km Glaettung: weniger "Inseln" um Einzelstationen
+  const float w0 = 1.0f / (3500.0f * 3500.0f);  // Gewicht des globalen Mittelwerts (wirkt fern der Stationen)
   for (int gy = 0; gy < PROP_GH; gy++) {
-    double lat = 89.0 - gy * 2.0;
+    float la = (89.0f - gy * 2.0f) * (float)DEG;
+    float cla = cosf(la), sla = sinf(la);
     for (int gx = 0; gx < PROP_GW; gx++) {
-      double lon = -179.0 + gx * 2.0;
-      double ws = w0, rs = w0 * m.r_mean;
+      float lo = (-179.0f + gx * 2.0f) * (float)DEG;
+      float x = cla * cosf(lo), y = cla * sinf(lo), z = sla;
+      float ws = w0, rs = w0 * m.r_mean;
       for (int i = 0; i < n; i++) {
-        double d = gc_km(lat, lon, st[i].lat, st[i].lon);
-        double w = 1.0 / (d * d + 400.0 * 400.0);
+        float dx = x - sx[i], dy = y - sy[i], dz = z - sz[i];
+        float d2 = (dx * dx + dy * dy + dz * dz) * RE_F * RE_F;   // Sehne^2 in km^2
+        float w = 1.0f / (d2 + soft2);
         ws += w;
         rs += w * r[i];
       }
-      m.ratio[gy][gx] = (float)(rs / ws);
+      m.ratio[gy][gx] = rs / ws;
     }
+    if (yield_cb) yield_cb();
   }
 }
 
@@ -141,6 +155,17 @@ static float ratio_at(const PropModel &m, double lat, double lon) {
 float prop_muf(const PropModel &m, double lat, double lon, time_t t) {
   if (!m.valid) return NAN;
   return ratio_at(m, lat, lon) * prop_daylight_factor(lat, lon, t);
+}
+
+void prop_muf_grid(const PropModel &m, time_t t, uint8_t *out) {
+  SunPos s = sun_position(t - IONO_LAG_S);
+  for (int gy = 0; gy < PROP_GH; gy++) {
+    double lat = 89.0 - gy * 2.0;
+    for (int gx = 0; gx < PROP_GW; gx++) {
+      double v = m.valid ? m.ratio[gy][gx] * daylight_factor(s, lat, -179.0 + gx * 2.0) * 4.0 : 0;
+      out[gy * PROP_GW + gx] = (uint8_t)(v > 255 ? 255 : (v < 0 ? 0 : v + 0.5));
+    }
+  }
 }
 
 // ---------- Pfad ----------
