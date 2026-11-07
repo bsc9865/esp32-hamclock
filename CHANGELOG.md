@@ -5,6 +5,12 @@ Versionierung nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.9.2] - 2026-11-07
+### Behoben
+- Bild nach einem Software-Neustart (z.B. nach OTA-Update) verschoben bzw. mit Pixelfehlern: Display bekommt beim Start einen echten Reset-Puls über den IO-Expander
+- Längere vertikale Austastlücke (16+16 Zeilen) für die automatische DMA-Neusynchronisation
+- Update-Prüfung läuft auf Core 0 statt auf dem Kern des Display-Interrupts
+
 ## [0.9.1] - 2026-11-07
 ### Behoben
 - Update am Gerät: Der Knopf „Installieren“ zeigte keine Wirkung (Installation lief im Klick-Handler, die Fortschrittsanzeige wurde nicht gezeichnet); läuft jetzt in der Hauptschleife
