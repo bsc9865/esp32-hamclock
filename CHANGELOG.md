@@ -5,6 +5,11 @@ Versionierung nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-11-07
+### Behoben
+- Update am Gerät: Der Knopf „Installieren“ zeigte keine Wirkung (Installation lief im Klick-Handler, die Fortschrittsanzeige wurde nicht gezeichnet); läuft jetzt in der Hauptschleife
+- Firmware-Button in den Einstellungen breiter
+
 ## [0.9.0] - 2026-11-07
 ### Hinzugefügt
 - Firmware-Updates über WLAN: ArduinoOTA mit Passwort (`pio run -t upload --upload-port esp32-hamclock.local`)
