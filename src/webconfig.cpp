@@ -140,6 +140,8 @@ static void page(const char *msg = nullptr, bool ok = true) {
   h += checkbox("l4", "MUF", s.layers & LAYER_MUF);
   h += checkbox("l8", "APRS", s.layers & LAYER_APRS);
   h += checkbox("l16", "L&auml;ndergrenzen", !(s.layers & LAYER_HIDE_BORDERS));
+  h += checkbox("l32", "CQ-Zonen", s.layers & LAYER_CQ);
+  h += checkbox("l64", "ITU-Zonen", s.layers & LAYER_ITU);
   h += "<label>Aurora-Deckkraft (20&ndash;200 %)<input type=number name=aurpct min=20 max=200 value=" + String(s.aurora_pct) + "></label>";
   h += F("</fieldset>");
 
@@ -203,7 +205,8 @@ static void handle_post() {
                 (srv->hasArg("m4") ? MODE_DIGI : 0) | (srv->hasArg("m8") ? MODE_OTHER : 0);
   s.layers = (srv->hasArg("l1") ? LAYER_AURORA : 0) | (srv->hasArg("l2") ? LAYER_DRAP : 0) |
              (srv->hasArg("l4") ? LAYER_MUF : 0) | (srv->hasArg("l8") ? LAYER_APRS : 0) |
-             (srv->hasArg("l16") ? 0 : LAYER_HIDE_BORDERS);
+             (srv->hasArg("l16") ? 0 : LAYER_HIDE_BORDERS) | (srv->hasArg("l32") ? LAYER_CQ : 0) |
+             (srv->hasArg("l64") ? LAYER_ITU : 0);
   int pct = srv->arg("aurpct").toInt();
   if (pct >= 20 && pct <= 200) s.aurora_pct = (uint8_t)pct;
 

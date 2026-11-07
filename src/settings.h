@@ -18,7 +18,8 @@ struct Settings {
 };
 
 // LAYER_HIDE_BORDERS ist umgekehrt gespeichert, damit Grenzen auch bei vorhandenen Einstellungen sichtbar sind
-enum : uint8_t { LAYER_AURORA = 1, LAYER_DRAP = 2, LAYER_MUF = 4, LAYER_APRS = 8, LAYER_HIDE_BORDERS = 16 };
+enum : uint8_t { LAYER_AURORA = 1, LAYER_DRAP = 2, LAYER_MUF = 4, LAYER_APRS = 8, LAYER_HIDE_BORDERS = 16,
+                 LAYER_CQ = 32, LAYER_ITU = 64 };
 #define LAYERS_DEFAULT LAYER_AURORA
 
 extern Settings g_settings;

@@ -20,7 +20,7 @@
 #include "ui_theme.h"
 
 static constexpr int W = 800, H = 480;
-static constexpr int MAX_LABELS = 80;
+static constexpr int MAX_LABELS = 200;
 static constexpr int MAX_APRS = 80;
 static AprsStation *aprs_view;   // PSRAM
 static int n_aprs = 0;
@@ -79,6 +79,17 @@ static void place_labels() {
     for (int i = 0; i < n_aprs; i++)
       if (!add_label(k, aprs_view[i].p.lat, aprs_view[i].p.lon, aprs_view[i].p.call,
                      APRS_COLORS[aprs_category(aprs_view[i].p.sym_table, aprs_view[i].p.sym_code)])) break;
+  // CQ-/ITU-Zonennummern
+  uint8_t zmask = ((g_settings.layers & LAYER_CQ) ? 1 : 0) | ((g_settings.layers & LAYER_ITU) ? 2 : 0);
+  if (zmask) {
+    static ZoneLabel zl[140];
+    int nz = map_zone_labels(zmask, zl, 140);
+    char t[12];
+    for (int i = 0; i < nz; i++) {
+      snprintf(t, sizeof t, "%s%d", zl[i].type == 0 ? "CQ " : "ITU ", zl[i].number);
+      if (!add_label(k, zl[i].lat, zl[i].lon, t, ZONE_COLORS[zl[i].type])) break;
+    }
+  }
   // Satelliten immer beschriften
   const SatRow *sr;
   int ns = satpanel_rows(&sr);
@@ -112,6 +123,8 @@ static void render(bool smooth = true) {
   if (g_settings.layers & LAYER_AURORA) ov.aurora = spacewx_aurora();
   ov.aurora_pct = g_settings.aurora_pct;
   ov.borders = !(g_settings.layers & LAYER_HIDE_BORDERS);
+  ov.cq_zones = g_settings.layers & LAYER_CQ;
+  ov.itu_zones = g_settings.layers & LAYER_ITU;
   satpanel_overlays(ov);
   if (g_settings.layers & LAYER_DRAP) ov.drap = spacewx_drap();
   map_render(buf, view, last_render, qlat, qlon, ms, m, &ov);
@@ -347,9 +360,11 @@ void mapscreen_open() {
   // Ebenen: Aurora, D-RAP (umschaltbar, gespeichert)
   static const struct { const char *name; uint8_t bit; uint32_t color; } layer_btns[] = {
       {"Aurora", LAYER_AURORA, 0x28FF6E}, {"D-RAP", LAYER_DRAP, 0xFF461E}, {"MUF", LAYER_MUF, 0xF5C81E},
-      {"APRS", LAYER_APRS, 0xF97316}, {"Grenzen", LAYER_HIDE_BORDERS, 0xFFECBE}};
-  for (int i = 0; i < 5; i++) {
-    lv_obj_t *b = mk_btn(8, 198 + i * 54, 110, 44, layer_btns[i].name, nullptr);
+      {"APRS", LAYER_APRS, 0xF97316}, {"Grenzen", LAYER_HIDE_BORDERS, 0xFFECBE},
+      {"CQ-Zonen", LAYER_CQ, 0xFFA94D}, {"ITU-Zonen", LAYER_ITU, 0x7DD3FC}};
+  for (int i = 0; i < 7; i++) {
+    lv_obj_t *b = mk_btn(8, 130 + i * 47, 104, 40, layer_btns[i].name, nullptr);
+    lv_obj_set_style_text_font(lv_obj_get_child(b, 0), &lv_font_montserrat_14, 0);
     lv_obj_add_flag(b, LV_OBJ_FLAG_CHECKABLE);
     lv_obj_set_style_bg_color(b, lv_color_hex(layer_btns[i].color), LV_STATE_CHECKED);
     lv_obj_set_style_bg_opa(b, LV_OPA_80, LV_STATE_CHECKED);
@@ -367,7 +382,7 @@ void mapscreen_open() {
 
   // Deckkraft der Aurora (neben dem Aurora-Schalter)
   lv_obj_t *ab = lv_obj_create(scr);
-  lv_obj_set_pos(ab, 124, 198);
+  lv_obj_set_pos(ab, 118, 128);
   lv_obj_set_size(ab, 200, 44);
   lv_obj_set_style_bg_color(ab, lv_color_hex(0x000000), 0);
   lv_obj_set_style_bg_opa(ab, LV_OPA_60, 0);

@@ -320,6 +320,62 @@ static void render_borders(const uint8_t *b) {
   }
 }
 
+// ---------- CQ-/ITU-Zonen ----------
+const uint32_t ZONE_COLORS[2] = {0xFFA94D, 0x7DD3FC};
+
+int map_zone_labels(uint8_t mask, ZoneLabel *out, int max) {
+  const uint8_t *b = maps_zones();
+  if (!b || memcmp(b, "ZON1", 4) != 0) return 0;
+  int nz = (uint16_t)rd16(b + 4), k = 0;
+  const uint8_t *p = b + 6;
+  for (int i = 0; i < nz; i++) {
+    uint8_t typ = p[0], num = p[1];
+    int n = (uint16_t)rd16(p + 6);
+    bool dup = false;   // Zonen aus mehreren Teilen nur einmal beschriften
+    for (int j = 0; j < k; j++) if (out[j].type == typ && out[j].number == num) dup = true;
+    if ((mask & (1 << typ)) && !dup && k < max) out[k++] = {typ, num, rd16(p + 2) / 100.0f, rd16(p + 4) / 100.0f};
+    p += 16 + n * 4;
+  }
+  return k;
+}
+
+static void render_zones(uint8_t mask) {
+  const uint8_t *b = maps_zones();
+  if (!b || memcmp(b, "ZON1", 4) != 0) return;
+  int nz = (uint16_t)rd16(b + 4);
+  const uint8_t *p = b + 6;
+  double lat_top = V.lat_c + V.h / 2.0 * V.dpp, lat_bot = V.lat_c - V.h / 2.0 * V.dpp;
+  double half_w = V.w / 2.0 * V.dpp;
+  bool whole_world = half_w >= 180.0;
+  int jump = (int)(180.0 / V.dpp);
+  uint32_t alpha = V.dpp < 0.15 ? 24 : 18;
+  for (int i = 0; i < nz; i++) {
+    uint8_t typ = p[0];
+    int n = (uint16_t)rd16(p + 6);
+    double minlat = rd16(p + 8) / 100.0, minlon = rd16(p + 10) / 100.0;
+    double maxlat = rd16(p + 12) / 100.0, maxlon = rd16(p + 14) / 100.0;
+    const uint8_t *pts = p + 16;
+    p = pts + n * 4;
+    if (!(mask & (1 << typ))) continue;
+    if (maxlat < lat_bot || minlat > lat_top) continue;
+    if (!whole_world) {
+      double mid = (minlon + maxlon) / 2.0, half = (maxlon - minlon) / 2.0;
+      if (fabs(norm180(mid - V.lon_c)) > half_w + half) continue;
+    }
+    uint16_t c = hex565(ZONE_COLORS[typ]);
+    int x0 = 0, y0 = 0, xs = 0, ys = 0;
+    for (int k = 0; k < n; k++) {
+      int x1, y1;
+      to_px(rd16(pts + k * 4) / 100.0, rd16(pts + k * 4 + 2) / 100.0, x1, y1);
+      if (k == 0) { xs = x1; ys = y1; }
+      else if (abs(x1 - x0) < jump) line(x0, y0, x1, y1, c, alpha);
+      x0 = x1;
+      y0 = y1;
+    }
+    if (abs(xs - x0) < jump) line(x0, y0, xs, ys, c, alpha);
+  }
+}
+
 // ---------- Gitter ----------
 static void render_grid() {
   const uint16_t c = rgb(200, 220, 255);
@@ -458,6 +514,7 @@ void map_render(uint16_t *buf, const MapView &v, time_t t, double qth_lat, doubl
   if (ov && ov->muf) render_muf(ov->muf);
   render_grid();
   if (ov && ov->borders) render_borders(maps_borders());
+  if (ov && (ov->cq_zones || ov->itu_zones)) render_zones((ov->cq_zones ? 1 : 0) | (ov->itu_zones ? 2 : 0));
   if (ov && ov->muf && ov->iono_n) render_ionosondes(*ov);
   if (ov && ov->fp_n > 2) polyline(ov->fp_lat, ov->fp_lon, ov->fp_n, true, rgb(255, 255, 255), 22);
   if (ov && ov->trk_n > 1) polyline(ov->trk_lat, ov->trk_lon, ov->trk_n, false, rgb(255, 220, 0), 26);

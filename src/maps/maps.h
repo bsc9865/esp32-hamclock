@@ -17,3 +17,5 @@ MapImage maps_night();
 
 // Landgrenzen (assets/borders.bin, siehe scripts/gen_borders.py); nullptr wenn nicht vorhanden
 const uint8_t *maps_borders();
+// CQ-/ITU-Zonen (assets/zones.bin, siehe scripts/gen_zones.py)
+const uint8_t *maps_zones();

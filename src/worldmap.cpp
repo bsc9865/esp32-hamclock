@@ -37,6 +37,8 @@ void worldmap_render(time_t t) {
   if (g_settings.layers & LAYER_AURORA) ov.aurora = spacewx_aurora();
   ov.aurora_pct = g_settings.aurora_pct;
   ov.borders = !(g_settings.layers & LAYER_HIDE_BORDERS);
+  ov.cq_zones = g_settings.layers & LAYER_CQ;
+  ov.itu_zones = g_settings.layers & LAYER_ITU;
   satpanel_overlays(ov);
   if (g_settings.layers & LAYER_DRAP) ov.drap = spacewx_drap();
   map_render(fb, view, t, qlat, qlon, map_spots, n_map_spots, &ov);

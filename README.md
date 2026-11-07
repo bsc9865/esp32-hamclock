@@ -75,6 +75,15 @@ scripts/version.py      Versionsnummer aus git describe
 Semantische Versionierung über Git-Tags. Die Firmware-Version (`FW_VERSION`) kommt automatisch aus
 `git describe` und wird auf dem Gerät angezeigt. Änderungen stehen in der [CHANGELOG.md](CHANGELOG.md).
 
+## Datenquellen und Lizenzen
+
+- Kartenbilder: NASA Blue Marble / Black Marble (gemeinfrei)
+- Ländergrenzen: [Natural Earth](https://www.naturalearthdata.com/) (gemeinfrei)
+- CQ-/ITU-Zonen: [HB9HIL/hamradio-zones-geojson](https://github.com/HB9HIL/hamradio-zones-geojson) (MIT, siehe `assets/licenses/`)
+- Präfixe: cty.dat von AD1C ([country-files.com](https://www.country-files.com/))
+- SGP4: Vallado, über [Hopperpop/Sgp4-Library](https://github.com/Hopperpop/Sgp4-Library) (MIT, `lib/sgp4core`)
+- Live-Daten: hamqsl.com (N0NBH), NOAA SWPC, KC2G/GIRO, CelesTrak, POTA, WWFF, DXSpider-Cluster, APRS-IS, Open-Meteo (CC BY 4.0)
+
 ## Lizenz
 
 MIT

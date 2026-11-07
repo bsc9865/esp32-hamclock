@@ -32,6 +32,7 @@ struct MapOverlays {
   uint8_t aurora_pct = 100;          // Deckkraft der Aurora in Prozent (20..200)
   const uint8_t *drap = nullptr;     // 90 x 90, MHz*5 (Zeile 0 = 89 Grad, Spalte 0 = -178 Grad)
   bool borders = false;               // Landgrenzen zeichnen
+  bool cq_zones = false, itu_zones = false;
   // MUF-Karte: 180 x 90 (2 Grad, Zeile 0 = 89 Grad N, Spalte 0 = -179 Grad), Wert = MHz * 4
   const uint8_t *muf = nullptr;
   // Ionosonden (Punkte mit Messwert)
@@ -46,6 +47,11 @@ struct MapOverlays {
 
 // Glaettung beim Vergroessern (bilinear) an/aus; aus = schneller (fuer schrittweises Rendern)
 void map_set_smoothing(bool on);
+
+// Zonen-Beschriftungen (Nummer und Position) fuer CQ (typ 0) bzw. ITU (typ 1)
+struct ZoneLabel { uint8_t type, number; float lat, lon; };
+int map_zone_labels(uint8_t type_mask, ZoneLabel *out, int max);   // type_mask: Bit 0 = CQ, Bit 1 = ITU
+extern const uint32_t ZONE_COLORS[2];
 
 // Farbe fuer eine MUF in MHz (gleiche Skala wie die Kartenebene), 0xRRGGBB
 uint32_t map_muf_color(float mhz);
