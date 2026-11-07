@@ -4,6 +4,8 @@ Alle wichtigen Änderungen an diesem Projekt. Format nach [Keep a Changelog](htt
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unreleased]
+
+## [0.10.0] - 2026-11-07
 ### Hinzugefügt
 - Wetter am QTH (Open-Meteo, CC BY 4.0, alle 15 min): Temperatur, Wetter und Wind in der Kopfzeile; Gewitterwarnung (jetzt oder in den nächsten 3 h) in Rot
 - Seite „Wetter“ (Antippen der Wetteranzeige): aktuelle Werte, 12 Stunden, 3 Tage
