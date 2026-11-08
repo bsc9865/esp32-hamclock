@@ -59,6 +59,13 @@ Beim ersten Start öffnet sich die Einstellungsseite: WLAN auswählen, Passwort,
 
 Hinweis: Unter macOS dauert die Namensauflösung von `.local` ohne IPv6 bei manchen Programmen 5 s; die IP-Adresse antwortet sofort.
 
+## Sicherheit
+
+- Die Uhr ist für das Heimnetz gedacht: Status- und Konfigurationsseite laufen über HTTP. Bitte **keine Portfreigabe** ins Internet einrichten.
+- Die Konfigurationsseite verlangt Basic-Auth (Benutzer `admin`, Kennwort = OTA-Passwort) und ist gegen Cross-Site-Request-Forgery geschützt. Ohne OTA-Passwort ist sie offen und OTA ist abgeschaltet.
+- Alle HTTPS-Abrufe prüfen das Server-Zertifikat. Updates am Gerät werden nur aus den Releases dieses Repositorys installiert; die Firmware ist nicht signiert (kein Secure Boot).
+- WLAN- und OTA-Passwort liegen unverschlüsselt im NVS-Speicher des ESP32 (wer das Gerät in der Hand hat, kann sie auslesen).
+
 ## Projektstruktur
 
 ```
