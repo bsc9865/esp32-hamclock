@@ -4,6 +4,8 @@ Alle wichtigen Änderungen an diesem Projekt. Format nach [Keep a Changelog](htt
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unreleased]
+
+## [0.15.0] - 2026-11-08
 ### Hinzugefügt
 - Detailansicht Deutschland in der Vollbild-Karte (Schalter „DE“): unverzerrt, Zoom 1× (ganz Deutschland) bis 6× (ca. 130 km Bildbreite), eigener Ausschnitt je Ansicht
 - Detailkarte Mitteleuropa aus Natural Earth 1:10 Mio. (ca. 1,1 km/Pixel, Seen, Küsten), genauere Ländergrenzen, Bundesländergrenzen, 58 Städte mit Namen, Locator-Quadrate beschriftet (`scripts/gen_detail.py`, 680 KB)
