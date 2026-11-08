@@ -25,6 +25,27 @@ static bool fs_ok = false;
 
 uint32_t sats_seq() { return seq; }
 
+// Detailansicht
+static volatile int det_norad = 0;
+static SatDetail *det;                    // veroeffentlicht (PSRAM), Schutz durch view_mtx
+static volatile uint32_t det_seq = 0;
+
+void sats_detail_open(int norad) { det_norad = norad; }
+uint32_t sats_detail_seq() { return det_seq; }
+void sats_detail_get(SatDetail &out) {
+  xSemaphoreTake(view_mtx, portMAX_DELAY);
+  out = *det;
+  xSemaphoreGive(view_mtx);
+}
+
+int sats_favorites(int *norad, int max) {
+  xSemaphoreTake(mtx, portMAX_DELAY);
+  int n = n_fav < max ? n_fav : max;
+  memcpy(norad, fav, n * sizeof(int));
+  xSemaphoreGive(mtx);
+  return n;
+}
+
 void sats_get(SatView &out) {
   xSemaphoreTake(view_mtx, portMAX_DELAY);
   out = *view;
@@ -32,6 +53,7 @@ void sats_get(SatView &out) {
 }
 
 void sats_select(int norad) { sel = norad; seq++; }
+int sats_selected() { return sel; }
 
 // ---------- Favoriten (NVS) ----------
 static void load_favorites() {
@@ -162,17 +184,66 @@ static Satellite *find(int norad) {
   return nullptr;
 }
 
+// Detailwerte fuer den geoeffneten Satelliten (jede Sekunde); Ueberfluege nur bei Bedarf neu
+static void update_detail(time_t now) {
+  static SatDetail *w = (SatDetail *)heap_caps_calloc(1, sizeof(SatDetail), MALLOC_CAP_SPIRAM);
+  static time_t last_passes = 0;
+  int norad = det_norad;
+  if (!norad) { w->norad = 0; return; }
+  xSemaphoreTake(mtx, portMAX_DELAY);
+  Satellite *s = find(norad);
+  if (!s) { xSemaphoreGive(mtx); return; }
+  bool fresh = w->norad != norad;
+  if (fresh) memset(w, 0, sizeof *w);
+  w->norad = norad;
+  strncpy(w->name, s->name(), sizeof w->name - 1);
+  strncpy(w->full_name, s->full_name(), sizeof w->full_name - 1);
+  w->geo = s->is_geo();
+  w->t = now;
+  SatState a, b;
+  w->valid = s->state(now, qth, w->st) && s->state(now - 1, qth, a) && s->state(now + 1, qth, b);
+  w->range_rate = w->valid ? (b.range_km - a.range_km) / 2.0 : 0;
+  // Ueberfluege: beim Oeffnen, nach Ende des ersten und alle 10 min
+  if (!w->geo && (fresh || (w->n_pass && w->pass[0].los < now) || now - last_passes > 600)) {
+    w->n_pass = s->passes(qth, now, now + 36 * 3600, 0, w->pass, SAT_DET_PASSES);
+    w->polar_n = 0;
+    if (w->n_pass) {
+      const SatPass &p = w->pass[0];
+      int dur = (int)(p.los - p.aos);
+      int step = dur / (SAT_POLAR_N - 1);
+      if (step < 1) step = 1;
+      for (time_t t = p.aos; t <= p.los && w->polar_n < SAT_POLAR_N; t += step) {
+        SatState st;
+        if (!s->state(t, qth, st)) break;
+        w->polar_az[w->polar_n] = (float)st.az;
+        w->polar_el[w->polar_n] = (float)(st.el < 0 ? 0 : st.el);
+        w->polar_n++;
+      }
+    }
+    last_passes = now;
+  }
+  xSemaphoreGive(mtx);
+  xSemaphoreTake(view_mtx, portMAX_DELAY);
+  *det = *w;
+  xSemaphoreGive(view_mtx);
+  det_seq++;
+}
+
 static void sat_task(void *) {
   static SatView *work = (SatView *)heap_caps_calloc(1, sizeof(SatView), MALLOC_CAP_SPIRAM);
   static SatPass passes[SAT_MAX_FAV];
   static bool has_pass[SAT_MAX_FAV];
   static int pass_norad[SAT_MAX_FAV];
-  time_t last_pass = 0, last_track = 0;
+  time_t last_pass = 0, last_track = 0, last_full = 0;
   int last_sel = -1;
   for (;;) {
-    vTaskDelay(pdMS_TO_TICKS(5000));
+    vTaskDelay(pdMS_TO_TICKS(1000));
     if (time(nullptr) < 1700000000 || n_catalog == 0) continue;
     time_t now = time(nullptr);
+    update_detail(now);
+    // Liste, Bodenspur usw. alle 5 s (bzw. sofort nach Aenderung)
+    if (now - last_full < 5 && !recalc_passes && sel == last_sel) continue;
+    last_full = now;
 
     xSemaphoreTake(mtx, portMAX_DELAY);   // Katalog waehrend der Berechnung sperren
     int nf = n_fav;
@@ -241,6 +312,7 @@ void sats_begin(double qth_lat, double qth_lon) {
   view_mtx = xSemaphoreCreateMutex();
   catalog = (Satellite *)heap_caps_calloc(CATALOG_MAX, sizeof(Satellite), MALLOC_CAP_SPIRAM);
   view = (SatView *)heap_caps_calloc(1, sizeof(SatView), MALLOC_CAP_SPIRAM);
+  det = (SatDetail *)heap_caps_calloc(1, sizeof(SatDetail), MALLOC_CAP_SPIRAM);
   fs_ok = LittleFS.begin(true, "/littlefs", 5, "spiffs");
   if (!fs_ok) Serial.println("LittleFS: nicht verfuegbar");
   load_favorites();

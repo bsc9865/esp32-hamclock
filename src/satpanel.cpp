@@ -5,6 +5,7 @@
 #include "sats.h"
 #include "map_render.h"
 #include "worldmap.h"
+#include "satdetail.h"
 
 static constexpr int ROWS = 11, ROW_H = 19;
 static constexpr uint32_t COL_SAT = 0xE5E7EB, COL_VISIBLE = 0x4ADE80, COL_SELECTED = 0xFFDC00;
@@ -53,10 +54,8 @@ static void row_clicked(lv_event_t *e) {
   int i = (int)(intptr_t)lv_event_get_user_data(e);
   if (!sv || i >= sv->n) return;
   const SatRow &r = sv->rows[order[i]];
-  sats_select(sv->sel_norad == r.norad ? 0 : r.norad);   // erneutes Antippen hebt die Auswahl auf
-  char buf[220];
-  satpanel_format(r, buf, sizeof buf);
-  worldmap_show_info(buf);
+  sats_select(r.norad);       // Bodenspur auf der Karte (in der Detailansicht abschaltbar)
+  satdetail_open(r.norad);
   force = true;
 }
 

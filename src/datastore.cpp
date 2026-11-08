@@ -5,6 +5,7 @@
 #include "activations.h"
 #include "spacewx.h"
 #include "sats.h"
+#include "satfreq.h"
 #include "propdata.h"
 #include "ota.h"
 #include "weather.h"
@@ -54,6 +55,7 @@ static Job jobs[] = {
   {spacewx_fetch_aurora, 30 * 60, 0, "Aurora (SWPC)"},
   {spacewx_fetch_sfi, 3 * 3600, 0, "SFI-Verlauf (SWPC)"},
   {sats_fetch_tle, 3600, 0, "TLE (CelesTrak)"},   // prueft selbst, ob die TLEs aelter als 12 h sind
+  {satfreq_fetch, 3600, 0, "Sat-Frequenzen (SatNOGS)"},   // prueft selbst, was fehlt oder veraltet ist
   {propdata_fetch, 15 * 60, 0, "Ionosonden (KC2G)"},
   {ota_check_github, 6 * 3600, 0, "Update (GitHub)"},
   {weather_fetch, 15 * 60, 0, "Wetter (Open-Meteo)"},
