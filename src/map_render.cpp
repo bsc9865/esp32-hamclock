@@ -109,7 +109,8 @@ static void to_px(double lat, double lon, int &x, int &y) {
 
 // ---------- Tag/Nacht ----------
 static void render_daynight(const SunPos &s) {
-  const MapImage day = maps_day(), night = maps_night();
+  const MapImage img = maps_image();
+  const uint16_t *pd = img.pal_day, *pn = img.pal_night;
   const bool bilinear = smoothing && V.dpp < SRC_DPP * 0.9;   // Vergroesserung -> glaetten
 
   // Spalten-Tabellen
@@ -153,28 +154,27 @@ static void render_daynight(const SunPos &s) {
     if (iv >= MAP_SRC_H) iv = MAP_SRC_H - 1;
     int iv2 = iv + 1 < MAP_SRC_H ? iv + 1 : iv;
     uint32_t fy = (uint32_t)((v - iv) * 32);
-    const uint8_t *d0 = day.px + iv * MAP_SRC_W, *d1 = day.px + iv2 * MAP_SRC_W;
-    const uint8_t *n0 = night.px + iv * MAP_SRC_W, *n1 = night.px + iv2 * MAP_SRC_W;
+    const uint8_t *r0 = img.px + iv * (MAP_SRC_W / 2), *r1 = img.px + iv2 * (MAP_SRC_W / 2);
     float a = sin(lat * DEG) * sd, b = cos(lat * DEG) * cd;
 
     for (int x = 0; x < W; x++) {
-      // Tag/Nacht-Gewicht zuerst: nur im Daemmerungsstreifen werden beide Bilder gebraucht
+      // Tag/Nacht-Gewicht; Tag und Nacht teilen die Pixel, nur die Palette unterscheidet sich
       float cz = a + b * coslon[x];
       int w = (int)((cz - lo) * scale);
       int u0 = sx[x];
       if (bilinear) {
         int u1 = u0 + 1 < MAP_SRC_W ? u0 + 1 : 0;
         uint32_t f = fx[x];
+        uint8_t i00 = map_px(r0, u0), i01 = map_px(r0, u1), i10 = map_px(r1, u0), i11 = map_px(r1, u1);
         uint16_t dc = 0, nc = 0;
         if (w > 0)
-          dc = blend565(blend565(day.pal[d1[u1]], day.pal[d1[u0]], f),
-                        blend565(day.pal[d0[u1]], day.pal[d0[u0]], f), fy);
+          dc = blend565(blend565(pd[i11], pd[i10], f), blend565(pd[i01], pd[i00], f), fy);
         if (w < 32)
-          nc = blend565(blend565(night.pal[n1[u1]], night.pal[n1[u0]], f),
-                        blend565(night.pal[n0[u1]], night.pal[n0[u0]], f), fy);
+          nc = blend565(blend565(pn[i11], pn[i10], f), blend565(pn[i01], pn[i00], f), fy);
         o[x] = w <= 0 ? nc : (w >= 32 ? dc : blend565(dc, nc, w));
       } else {
-        o[x] = w <= 0 ? night.pal[n0[u0]] : (w >= 32 ? day.pal[d0[u0]] : blend565(day.pal[d0[u0]], night.pal[n0[u0]], w));
+        uint8_t i = map_px(r0, u0);
+        o[x] = w <= 0 ? pn[i] : (w >= 32 ? pd[i] : blend565(pd[i], pn[i], w));
       }
     }
   }

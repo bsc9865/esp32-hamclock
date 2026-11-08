@@ -3,8 +3,7 @@
 #include "maps.h"
 #include <string.h>
 
-extern const uint8_t day_start[] asm("_binary_assets_map_day_bin_start");
-extern const uint8_t night_start[] asm("_binary_assets_map_night_bin_start");
+extern const uint8_t map_start[] asm("_binary_assets_map_bin_start");
 extern const uint8_t borders_start[] asm("_binary_assets_borders_bin_start");
 
 extern const uint8_t zones_start[] asm("_binary_assets_zones_bin_start");
@@ -12,18 +11,12 @@ extern const uint8_t zones_start[] asm("_binary_assets_zones_bin_start");
 const uint8_t *maps_borders() { return borders_start; }
 const uint8_t *maps_zones() { return zones_start; }
 
-// Palette in ausgerichteten RAM kopieren (eingebettete Daten sind evtl. nicht 2-Byte-ausgerichtet)
-static uint16_t pal_day[256], pal_night[256];
+// Paletten in ausgerichteten RAM kopieren (eingebettete Daten sind evtl. nicht 2-Byte-ausgerichtet)
+static uint16_t pal[32];
 
-MapImage maps_day() {
+MapImage maps_image() {
   static bool init = false;
-  if (!init) { memcpy(pal_day, day_start, 512); init = true; }
-  return {pal_day, day_start + 512};
-}
-
-MapImage maps_night() {
-  static bool init = false;
-  if (!init) { memcpy(pal_night, night_start, 512); init = true; }
-  return {pal_night, night_start + 512};
+  if (!init) { memcpy(pal, map_start + 4, 64); init = true; }
+  return {pal, pal + 16, map_start + 68};
 }
 #endif

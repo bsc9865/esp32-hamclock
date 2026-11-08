@@ -1,3 +1,5 @@
+#include <cstring>
+#include <cmath>
 // Rendert die Weltkarte auf dem PC (gleicher Code wie auf dem ESP32) als PPM-Bild.
 //   c++ -O2 -std=c++17 -Isrc test/host/render_map.cpp test/host/maps_file.cpp src/map_render.cpp src/astro.cpp -o /tmp/rm
 //   /tmp/rm <unix-zeit> <breite> <hoehe> <zoom> <lat> <lon> karte.ppm   (aus dem Projektordner starten)
@@ -21,6 +23,19 @@ int main(int argc, char **argv) {
   MapView v = zoom <= 1.0 && w == 2 * h ? map_view_world(w, h) : map_view_zoom(w, h, lat, lon, zoom);
   MapOverlays ov;
   ov.borders = true;
+  // optional 8. Argument: Ebenen fuer Vorschauen (a = Aurora-Testoval, c = CQ-Zonen, i = ITU-Zonen)
+  const char *layers = argc > 8 ? argv[8] : "";
+  static uint8_t aur[360 * 181];
+  if (strchr(layers, 'a')) {
+    for (int r = 0; r < 181; r++)
+      for (int c = 0; c < 360; c++) {
+        double d = fabs(fabs(r - 90.0) - 66.0);
+        aur[r * 360 + c] = d < 6 ? (uint8_t)(80 - d * 12) : 0;
+      }
+    ov.aurora = aur;
+  }
+  ov.cq_zones = strchr(layers, 'c') != nullptr;
+  ov.itu_zones = strchr(layers, 'i') != nullptr;
   map_render(buf.data(), v, t, q.lat, q.lon, sp, 10, &ov);
   FILE *f = fopen(argv[7], "wb");
   fprintf(f, "P6\n%d %d\n255\n", w, h);

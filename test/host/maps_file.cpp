@@ -4,24 +4,19 @@
 #include <cstdlib>
 #include <vector>
 
-static MapImage load(const char *path, std::vector<uint8_t> &buf, uint16_t *pal) {
-  FILE *f = fopen(path, "rb");
-  if (!f) { fprintf(stderr, "kann %s nicht oeffnen\n", path); exit(1); }
-  buf.resize(512 + MAP_SRC_W * MAP_SRC_H);
-  size_t n = fread(buf.data(), 1, buf.size(), f);
-  fclose(f);
-  if (n != buf.size()) { fprintf(stderr, "%s: falsche Groesse\n", path); exit(1); }
-  for (int i = 0; i < 256; i++) pal[i] = buf[2 * i] | (buf[2 * i + 1] << 8);
-  return {pal, buf.data() + 512};
-}
-
-MapImage maps_day() {
-  static std::vector<uint8_t> b; static uint16_t p[256]; static MapImage m = load("assets/map_day.bin", b, p);
-  return m;
-}
-MapImage maps_night() {
-  static std::vector<uint8_t> b; static uint16_t p[256]; static MapImage m = load("assets/map_night.bin", b, p);
-  return m;
+MapImage maps_image() {
+  static std::vector<uint8_t> buf;
+  static uint16_t pal[32];
+  if (buf.empty()) {
+    FILE *f = fopen("assets/map.bin", "rb");
+    if (!f) { fprintf(stderr, "kann assets/map.bin nicht oeffnen\n"); exit(1); }
+    buf.resize(68 + MAP_SRC_W * MAP_SRC_H / 2);
+    size_t n = fread(buf.data(), 1, buf.size(), f);
+    fclose(f);
+    if (n != buf.size() || buf[0] != 'M' || buf[3] != '4') { fprintf(stderr, "map.bin: falsches Format\n"); exit(1); }
+    for (int i = 0; i < 32; i++) pal[i] = buf[4 + 2 * i] | (buf[5 + 2 * i] << 8);
+  }
+  return {pal, pal + 16, buf.data() + 68};
 }
 
 const uint8_t *maps_borders() {

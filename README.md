@@ -77,8 +77,7 @@ Semantische Versionierung über Git-Tags. Die Firmware-Version (`FW_VERSION`) ko
 
 ## Datenquellen und Lizenzen
 
-- Kartenbilder: NASA Blue Marble / Black Marble (gemeinfrei)
-- Ländergrenzen: [Natural Earth](https://www.naturalearthdata.com/) (gemeinfrei)
+- Karte (Land/Wasser, Seen) und Ländergrenzen: [Natural Earth](https://www.naturalearthdata.com/) (gemeinfrei), erzeugt mit `scripts/gen_map_simple.py` bzw. `scripts/gen_borders.py`
 - CQ-/ITU-Zonen: [HB9HIL/hamradio-zones-geojson](https://github.com/HB9HIL/hamradio-zones-geojson) (MIT, siehe `assets/licenses/`)
 - Präfixe: cty.dat von AD1C ([country-files.com](https://www.country-files.com/))
 - SGP4: Vallado, über [Hopperpop/Sgp4-Library](https://github.com/Hopperpop/Sgp4-Library) (MIT, `lib/sgp4core`)
