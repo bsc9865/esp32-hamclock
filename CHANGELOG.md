@@ -4,6 +4,8 @@ Alle wichtigen Änderungen an diesem Projekt. Format nach [Keep a Changelog](htt
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unreleased]
+
+## [0.17.0] - 2026-11-08
 ### Geändert
 - Satelliten: Bahnberechnung auf Kopien ohne lange Sperre und je Durchlauf ein Satellit; vorher blockierte die Überflugsberechnung (ca. 17 s) Satellitenauswahl, SatNOGS-Abruf und die Live-Werte der Detailansicht
 - Refactoring: gemeinsamer JSON-Scanner (`json_scan.h`), PSRAM-Allokator (`psram_alloc.h`) und Task-Start mit PSRAM-Stack (`task_util.h`); atomare Zähler statt `volatile` (keine Compiler-Warnungen mehr in den Projektdateien)
