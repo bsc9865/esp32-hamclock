@@ -4,6 +4,8 @@ Alle wichtigen Änderungen an diesem Projekt. Format nach [Keep a Changelog](htt
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unreleased]
+
+## [0.13.0] - 2026-11-08
 ### Hinzugefügt
 - Ländergrenzen auf der Karte (Natural Earth 1:50 Mio., gemeinfrei; 392 Linien, 83 KB): standardmäßig an, Schalter „Grenzen“ in der Vollbild-Karte und auf der Konfigurationsseite
 - CQ- und ITU-Zonen als Kartenebenen (HB9HIL, MIT; vereinfacht auf 13 500 Punkte), in der Vollbild-Karte mit Zonennummern
