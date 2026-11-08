@@ -4,6 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include "astro.h"
+#ifdef ARDUINO
+#include <esp_heap_caps.h>
+#endif
 
 static constexpr double DEG = M_PI / 180.0;
 static constexpr double SRC_DPP = 360.0 / MAP_SRC_W;   // Grad pro Quellpixel
@@ -57,6 +60,25 @@ void map_view_to_xy(const MapView &v, double lat, double lon, double &x, double 
 void map_view_to_latlon(const MapView &v, double x, double y, double &lat, double &lon) {
   lon = norm180(v.lon_c + (x - v.w / 2.0) * v.dppx);
   lat = v.lat_c - (y - v.h / 2.0) * v.dpp;
+}
+
+// ---------- Tabellen ----------
+// Spalten-/Zeilentabellen der Renderer: auf dem ESP32 im PSRAM (malloc legt Bloecke < 16 KB sonst
+// in den knappen internen RAM); sie werden zeilenweise linear gelesen und bleiben im Cache
+static void *tab_alloc(size_t n) {
+#ifdef ARDUINO
+  void *p = heap_caps_malloc(n, MALLOC_CAP_SPIRAM);
+  if (p) return p;
+#endif
+  return malloc(n);
+}
+
+static void tab_free(void *p) {
+#ifdef ARDUINO
+  heap_caps_free(p);
+#else
+  free(p);
+#endif
 }
 
 // ---------- Pixel-Helfer ----------
@@ -199,11 +221,11 @@ static void render_daynight(const SunPos &s) {
   static float *coslon = nullptr;
   static int cap = 0;
   if (cap < W) {
-    free(cw); free(cd); free(cin); free(coslon);
-    cw = (Samp *)malloc(W * sizeof(Samp));
-    cd = (Samp *)malloc(W * sizeof(Samp));
-    cin = (bool *)malloc(W);
-    coslon = (float *)malloc(W * sizeof(float));
+    tab_free(cw); tab_free(cd); tab_free(cin); tab_free(coslon);
+    cw = (Samp *)tab_alloc(W * sizeof(Samp));
+    cd = (Samp *)tab_alloc(W * sizeof(Samp));
+    cin = (bool *)tab_alloc(W);
+    coslon = (float *)tab_alloc(W * sizeof(float));
     cap = W;
   }
   for (int x = 0; x < W; x++) {
@@ -283,7 +305,7 @@ static void render_grid_overlay(const uint8_t *grid, int gw, int gh, double lat0
   }
   static int16_t *col = nullptr;
   static int cap = 0;
-  if (cap < W) { free(col); col = (int16_t *)malloc(W * sizeof(int16_t)); cap = W; }
+  if (cap < W) { tab_free(col); col = (int16_t *)tab_alloc(W * sizeof(int16_t)); cap = W; }
   for (int x = 0; x < W; x++) {
     double lon = norm180(V.lon_c + (x + 0.5 - W / 2.0) * V.dppx);
     int c = (int)lround((lon - lon0) / dlon);
@@ -322,10 +344,10 @@ static void render_muf(const uint8_t *g) {
   static int8_t *prev = nullptr;
   static int cap = 0;
   if (cap < W) {
-    free(gx0); free(gfx); free(prev);
-    gx0 = (int16_t *)malloc(W * sizeof(int16_t));
-    gfx = (uint8_t *)malloc(W);
-    prev = (int8_t *)malloc(W);
+    tab_free(gx0); tab_free(gfx); tab_free(prev);
+    gx0 = (int16_t *)tab_alloc(W * sizeof(int16_t));
+    gfx = (uint8_t *)tab_alloc(W);
+    prev = (int8_t *)tab_alloc(W);
     cap = W;
   }
   uint16_t col[8];

@@ -31,6 +31,8 @@ const MapSpot *worldmap_spots(int &n) {
   return map_spots;
 }
 
+uint32_t worldmap_last_ms = 0;   // fuer die Statusseite
+
 void worldmap_render(time_t t) {
   uint32_t t0 = millis();
   MapOverlays ov;
@@ -43,8 +45,9 @@ void worldmap_render(time_t t) {
   if (g_settings.layers & LAYER_DRAP) ov.drap = spacewx_drap();
   map_render(fb, view, t, qlat, qlon, map_spots, n_map_spots, &ov);
   lv_obj_invalidate(img);
+  worldmap_last_ms = millis() - t0;
   static bool first = true;
-  if (first) { Serial.printf("Karte gerendert in %lu ms\n", millis() - t0); first = false; }
+  if (first) { Serial.printf("Karte gerendert in %lu ms\n", worldmap_last_ms); first = false; }
 }
 
 // ---------- Touch: Info zu einem Punkt ----------

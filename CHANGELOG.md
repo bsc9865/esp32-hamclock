@@ -4,6 +4,9 @@ Alle wichtigen Änderungen an diesem Projekt. Format nach [Keep a Changelog](htt
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unreleased]
+### Geändert
+- Spalten-/Zeilentabellen des Kartenrenderers liegen im PSRAM statt im internen RAM: +9,7 KB freier interner RAM, größter freier Block 47 statt 37 KB, Renderzeit praktisch unverändert (+1,5 %)
+- Statusseite zeigt die Renderzeit der kleinen Karte (`map_render.small_ms`)
 
 ## [0.16.0] - 2026-11-08
 ### Hinzugefügt
