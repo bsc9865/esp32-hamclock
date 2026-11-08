@@ -4,6 +4,8 @@ Alle wichtigen Änderungen an diesem Projekt. Format nach [Keep a Changelog](htt
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unreleased]
+
+## [0.16.0] - 2026-11-08
 ### Hinzugefügt
 - Satelliten-Detailansicht (Tippen auf einen Satelliten im Reiter „Sat“): Polardiagramm des laufenden bzw. nächsten Überflugs mit AOS/LOS und aktueller Position, Live-Werte (Az, El, Entfernung, Radialgeschwindigkeit, Höhe), die nächsten 5 Überflüge, Schalter „Bahn auf Karte“
 - Frequenzen der Favoriten aus der SatNOGS DB (CC BY-SA 4.0), gefiltert auf Amateurfunkbänder, täglich aktualisiert und im Dateisystem zwischengespeichert; während eines Überflugs Doppler-korrigiert (RX/TX, bei Transpondern die Mitte des Durchlassbereichs)
