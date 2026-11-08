@@ -20,11 +20,13 @@ int main(int argc, char **argv) {
                   {-10, -55, 0xE879F9}, {61, -150, 0xDC2626}, {21, -157, 0x2DD4BF}, {42.0f, 12.5f, 0xA3E635},
                   {64, -18, 0x818CF8}, {40.4f, -3.7f, 0xF472B6}};
   std::vector<uint16_t> buf(w * h);
-  MapView v = zoom <= 1.0 && w == 2 * h ? map_view_world(w, h) : map_view_zoom(w, h, lat, lon, zoom);
+  // optional 8. Argument: Ebenen fuer Vorschauen (a = Aurora-Testoval, c = CQ-Zonen, i = ITU-Zonen,
+  // d = Detailansicht Deutschland mit lat/lon als Mitte)
+  const char *layers = argc > 8 ? argv[8] : "";
+  MapView v = strchr(layers, 'd') ? map_view_detail(w, h, lat, lon, zoom)
+              : zoom <= 1.0 && w == 2 * h ? map_view_world(w, h) : map_view_zoom(w, h, lat, lon, zoom);
   MapOverlays ov;
   ov.borders = true;
-  // optional 8. Argument: Ebenen fuer Vorschauen (a = Aurora-Testoval, c = CQ-Zonen, i = ITU-Zonen)
-  const char *layers = argc > 8 ? argv[8] : "";
   static uint8_t aur[360 * 181];
   if (strchr(layers, 'a')) {
     for (int r = 0; r < 181; r++)

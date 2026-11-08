@@ -44,3 +44,16 @@ const uint8_t *maps_zones() {
   }
   return b.data();
 }
+
+const uint8_t *maps_detail() {
+  static std::vector<uint8_t> b;
+  if (b.empty()) {
+    FILE *f = fopen("assets/detail.bin", "rb");
+    if (!f) return nullptr;
+    uint8_t buf[65536];
+    size_t n;
+    while ((n = fread(buf, 1, sizeof buf, f)) > 0) b.insert(b.end(), buf, buf + n);
+    fclose(f);
+  }
+  return b.data();
+}

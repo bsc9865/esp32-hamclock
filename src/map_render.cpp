@@ -17,15 +17,31 @@ static double norm180(double a) {
 }
 
 // ---------- Ausschnitt ----------
-MapView map_view_world(int w, int h) { return {w, h, 0.0, 0.0, 360.0 / w}; }
+MapView map_view_world(int w, int h) { return {w, h, 0.0, 0.0, 360.0 / w, 360.0 / w, false}; }
 
 MapView map_view_zoom(int w, int h, double lat_c, double lon_c, double zoom) {
-  MapView v{w, h, lon_c, lat_c, 360.0 / w / zoom};
+  double d = 360.0 / w / zoom;
+  MapView v{w, h, lon_c, lat_c, d, d, false};
+  map_view_clamp(v);
+  return v;
+}
+
+// Deutschland: 47,2..55,1 Grad N, 5,8..15,1 Grad E
+static constexpr double DE_LAT_MIN = 47.2, DE_LAT_MAX = 55.1, DE_LON_MIN = 5.8, DE_LON_MAX = 15.1;
+
+MapView map_view_detail(int w, int h, double lat_c, double lon_c, double zoom) {
+  double d = (DE_LAT_MAX - DE_LAT_MIN + 0.6) / h / zoom;   // zoom 1: Deutschland passt in die Hoehe
+  MapView v{w, h, lon_c, lat_c, d, d / cos(51.0 * M_PI / 180.0), true};
   map_view_clamp(v);
   return v;
 }
 
 void map_view_clamp(MapView &v) {
+  if (v.detail) {   // Mittelpunkt bleibt ueber Deutschland
+    v.lat_c = fmin(DE_LAT_MAX, fmax(DE_LAT_MIN, v.lat_c));
+    v.lon_c = fmin(DE_LON_MAX, fmax(DE_LON_MIN, v.lon_c));
+    return;
+  }
   v.lon_c = norm180(v.lon_c);
   double half = v.h * v.dpp / 2;
   if (half >= 90) v.lat_c = 0;
@@ -34,12 +50,12 @@ void map_view_clamp(MapView &v) {
 }
 
 void map_view_to_xy(const MapView &v, double lat, double lon, double &x, double &y) {
-  x = norm180(lon - v.lon_c) / v.dpp + v.w / 2.0;
+  x = norm180(lon - v.lon_c) / v.dppx + v.w / 2.0;
   y = (v.lat_c - lat) / v.dpp + v.h / 2.0;
 }
 
 void map_view_to_latlon(const MapView &v, double x, double y, double &lat, double &lon) {
-  lon = norm180(v.lon_c + (x - v.w / 2.0) * v.dpp);
+  lon = norm180(v.lon_c + (x - v.w / 2.0) * v.dppx);
   lat = v.lat_c - (y - v.h / 2.0) * v.dpp;
 }
 
@@ -107,39 +123,107 @@ static void to_px(double lat, double lon, int &x, int &y) {
   y = (int)floor(fy);
 }
 
+// ---------- Detaildaten ----------
+static inline int16_t rd16(const uint8_t *p) { return (int16_t)(p[0] | (p[1] << 8)); }
+static inline int32_t rd32(const uint8_t *p) { return (int32_t)(p[0] | (p[1] << 8) | (p[2] << 16) | ((uint32_t)p[3] << 24)); }
+
+struct Detail {
+  bool ok = false;
+  double lat_top, lon_left, dlat, dlon;
+  int w, h;
+  const uint8_t *px, *borders, *states, *cities;
+};
+
+static Detail detail() {
+  Detail d;
+  const uint8_t *b = maps_detail();
+  if (!b || memcmp(b, "DET1", 4) != 0) return d;
+  d.lat_top = rd32(b + 4) * 1e-5;
+  d.lon_left = rd32(b + 8) * 1e-5;
+  d.dlat = rd32(b + 12) * 1e-5;
+  d.dlon = rd32(b + 16) * 1e-5;
+  d.w = (uint16_t)rd16(b + 20);
+  d.h = (uint16_t)rd16(b + 22);
+  d.px = b + rd32(b + 24);
+  d.borders = b + rd32(b + 28);
+  d.states = b + rd32(b + 32);
+  d.cities = b + rd32(b + 36);
+  d.ok = true;
+  return d;
+}
+
+// Staedte nacheinander lesen; p zeigt auf den naechsten Eintrag
+static const uint8_t *next_city(const uint8_t *p, MapCity &c) {
+  c.lat = 40.0f + rd16(p) / 1000.0f;
+  c.lon = rd16(p + 2) / 1000.0f;
+  c.rank = p[4];
+  c.name = (const char *)(p + 5);
+  return p + 5 + strlen(c.name) + 1;
+}
+
+int map_detail_cities(MapCity *out, int max) {
+  Detail d = detail();
+  if (!d.ok) return 0;
+  int n = (uint16_t)rd16(d.cities), k = 0;
+  const uint8_t *p = d.cities + 2;
+  while (k < n && k < max) p = next_city(p, out[k++]);
+  return k;
+}
+
 // ---------- Tag/Nacht ----------
+// Quellraster fuer eine Spalte/Zeile: Index, Nachbarindex und Anteil (0..32)
+struct Samp { int16_t i0, i1; uint8_t f; };
+
+static void samp(double pos, int n, bool bilinear, bool wrap, Samp &s) {
+  if (bilinear) pos -= 0.5;
+  if (wrap) { if (pos < 0) pos += n; }
+  else if (pos < 0) pos = 0;
+  int i = (int)pos;
+  if (wrap) i %= n;
+  else if (i >= n) i = n - 1;
+  int j = i + 1 < n ? i + 1 : (wrap ? 0 : i);
+  s = {(int16_t)i, (int16_t)j, (uint8_t)((pos - floor(pos)) * 32)};
+}
+
 static void render_daynight(const SunPos &s) {
   const MapImage img = maps_image();
   const uint16_t *pd = img.pal_day, *pn = img.pal_night;
-  const bool bilinear = smoothing && V.dpp < SRC_DPP * 0.9;   // Vergroesserung -> glaetten
+  const Detail det = V.detail ? detail() : Detail();
+  // Vergroesserung -> glaetten
+  const bool bil_w = smoothing && V.dpp < SRC_DPP * 0.9;
+  const bool bil_d = det.ok && smoothing && V.dpp < det.dlat * 0.9;
 
-  // Spalten-Tabellen
-  static int16_t *sx = nullptr;
-  static uint8_t *fx = nullptr;
+  // Spalten-Tabellen (Weltkarte und Detailraster)
+  static Samp *cw = nullptr, *cd = nullptr;
+  static bool *cin = nullptr;
   static float *coslon = nullptr;
   static int cap = 0;
   if (cap < W) {
-    free(sx); free(fx); free(coslon);
-    sx = (int16_t *)malloc(W * sizeof(int16_t));
-    fx = (uint8_t *)malloc(W);
+    free(cw); free(cd); free(cin); free(coslon);
+    cw = (Samp *)malloc(W * sizeof(Samp));
+    cd = (Samp *)malloc(W * sizeof(Samp));
+    cin = (bool *)malloc(W);
     coslon = (float *)malloc(W * sizeof(float));
     cap = W;
   }
   for (int x = 0; x < W; x++) {
-    double lon = norm180(V.lon_c + (x + 0.5 - W / 2.0) * V.dpp);
-    double u = (lon + 180.0) / SRC_DPP - (bilinear ? 0.5 : 0.0);
-    if (u < 0) u += MAP_SRC_W;
-    int iu = (int)u;
-    sx[x] = (int16_t)(iu % MAP_SRC_W);
-    fx[x] = (uint8_t)((u - iu) * 32);
+    double lon = norm180(V.lon_c + (x + 0.5 - W / 2.0) * V.dppx);
+    samp((lon + 180.0) / SRC_DPP, MAP_SRC_W, bil_w, true, cw[x]);
+    cin[x] = false;
+    if (det.ok) {
+      double u = (lon - det.lon_left) / det.dlon;
+      cin[x] = u >= 0 && u < det.w;
+      samp(u, det.w, bil_d, false, cd[x]);
+    }
     coslon[x] = cos((lon - s.subsolar_lon) * DEG);
   }
 
-  const float sd = sin(s.decl * DEG), cd = cos(s.decl * DEG);
+  const float sd = sin(s.decl * DEG), cdc = cos(s.decl * DEG);
   // Uebergang von -12 Grad (nautische Daemmerung, volle Nacht) bis +3 Grad (voller Tag)
   const float lo = sinf(-12.0f * DEG), hi = sinf(3.0f * DEG);
   const float scale = 32.0f / (hi - lo);
   const uint16_t space = rgb(4, 6, 12);
+  const int stride_w = MAP_SRC_W / 2, stride_d = det.w / 2;
 
   for (int y = 0; y < H; y++) {
     uint16_t *o = &fb[y * W];
@@ -148,32 +232,38 @@ static void render_daynight(const SunPos &s) {
       for (int x = 0; x < W; x++) o[x] = space;
       continue;
     }
-    double v = (90.0 - lat) / SRC_DPP - (bilinear ? 0.5 : 0.0);
-    if (v < 0) v = 0;
-    int iv = (int)v;
-    if (iv >= MAP_SRC_H) iv = MAP_SRC_H - 1;
-    int iv2 = iv + 1 < MAP_SRC_H ? iv + 1 : iv;
-    uint32_t fy = (uint32_t)((v - iv) * 32);
-    const uint8_t *r0 = img.px + iv * (MAP_SRC_W / 2), *r1 = img.px + iv2 * (MAP_SRC_W / 2);
-    float a = sin(lat * DEG) * sd, b = cos(lat * DEG) * cd;
+    Samp rw, rd;
+    samp((90.0 - lat) / SRC_DPP, MAP_SRC_H, bil_w, false, rw);
+    const uint8_t *w0 = img.px + rw.i0 * stride_w, *w1 = img.px + rw.i1 * stride_w;
+    bool row_in = false;
+    const uint8_t *d0 = nullptr, *d1 = nullptr;
+    if (det.ok) {
+      double v = (det.lat_top - lat) / det.dlat;
+      row_in = v >= 0 && v < det.h;
+      samp(v, det.h, bil_d, false, rd);
+      d0 = det.px + rd.i0 * stride_d;
+      d1 = det.px + rd.i1 * stride_d;
+    }
+    float a = sin(lat * DEG) * sd, b = cos(lat * DEG) * cdc;
 
     for (int x = 0; x < W; x++) {
       // Tag/Nacht-Gewicht; Tag und Nacht teilen die Pixel, nur die Palette unterscheidet sich
       float cz = a + b * coslon[x];
       int w = (int)((cz - lo) * scale);
-      int u0 = sx[x];
-      if (bilinear) {
-        int u1 = u0 + 1 < MAP_SRC_W ? u0 + 1 : 0;
-        uint32_t f = fx[x];
-        uint8_t i00 = map_px(r0, u0), i01 = map_px(r0, u1), i10 = map_px(r1, u0), i11 = map_px(r1, u1);
+      const bool in = row_in && cin[x];
+      const Samp &c = in ? cd[x] : cw[x];
+      const Samp &r = in ? rd : rw;
+      const uint8_t *r0 = in ? d0 : w0, *r1 = in ? d1 : w1;
+      if (in ? bil_d : bil_w) {
+        uint8_t i00 = map_px(r0, c.i0), i01 = map_px(r0, c.i1), i10 = map_px(r1, c.i0), i11 = map_px(r1, c.i1);
         uint16_t dc = 0, nc = 0;
         if (w > 0)
-          dc = blend565(blend565(pd[i11], pd[i10], f), blend565(pd[i01], pd[i00], f), fy);
+          dc = blend565(blend565(pd[i11], pd[i10], c.f), blend565(pd[i01], pd[i00], c.f), r.f);
         if (w < 32)
-          nc = blend565(blend565(pn[i11], pn[i10], f), blend565(pn[i01], pn[i00], f), fy);
+          nc = blend565(blend565(pn[i11], pn[i10], c.f), blend565(pn[i01], pn[i00], c.f), r.f);
         o[x] = w <= 0 ? nc : (w >= 32 ? dc : blend565(dc, nc, w));
       } else {
-        uint8_t i = map_px(r0, u0);
+        uint8_t i = map_px(r0, c.i0);
         o[x] = w <= 0 ? pn[i] : (w >= 32 ? pd[i] : blend565(pd[i], pn[i], w));
       }
     }
@@ -195,7 +285,7 @@ static void render_grid_overlay(const uint8_t *grid, int gw, int gh, double lat0
   static int cap = 0;
   if (cap < W) { free(col); col = (int16_t *)malloc(W * sizeof(int16_t)); cap = W; }
   for (int x = 0; x < W; x++) {
-    double lon = norm180(V.lon_c + (x + 0.5 - W / 2.0) * V.dpp);
+    double lon = norm180(V.lon_c + (x + 0.5 - W / 2.0) * V.dppx);
     int c = (int)lround((lon - lon0) / dlon);
     col[x] = (int16_t)(((c % gw) + gw) % gw);
   }
@@ -241,7 +331,7 @@ static void render_muf(const uint8_t *g) {
   uint16_t col[8];
   for (int i = 0; i < 8; i++) col[i] = hex565(MUF_COLORS[i]);
   for (int x = 0; x < W; x++) {
-    double lon = norm180(V.lon_c + (x + 0.5 - W / 2.0) * V.dpp);
+    double lon = norm180(V.lon_c + (x + 0.5 - W / 2.0) * V.dppx);
     double fx = (lon + 179.0) / 2.0;
     if (fx < 0) fx += 180.0;
     int i0 = (int)fx;
@@ -284,23 +374,19 @@ static void render_ionosondes(const MapOverlays &ov) {
 }
 
 // ---------- Landgrenzen ----------
-static inline int16_t rd16(const uint8_t *p) { return (int16_t)(p[0] | (p[1] << 8)); }
-
-static void render_borders(const uint8_t *b) {
-  if (!b || memcmp(b, "BRD1", 4) != 0) return;
-  int nl = (uint16_t)rd16(b + 4);
-  const uint8_t *p = b + 6;
+// Linienblock: uint16 Anzahl, je Linie uint16 n, int16-Bbox, n Punkte; Grad = lat_off + Wert * scale
+static void render_lines(const uint8_t *p, double scale, double lat_off, uint16_t c, uint32_t alpha) {
+  int nl = (uint16_t)rd16(p);
+  p += 2;
   // sichtbarer Bereich (Grad) fuer das schnelle Aussortieren ganzer Linien
   double lat_top = V.lat_c + V.h / 2.0 * V.dpp, lat_bot = V.lat_c - V.h / 2.0 * V.dpp;
-  double half_w = V.w / 2.0 * V.dpp;
+  double half_w = V.w / 2.0 * V.dppx;
   bool whole_world = half_w >= 180.0;
-  uint32_t alpha = V.dpp < 0.15 ? 26 : 20;
-  uint16_t c = rgb(255, 236, 190);
-  int jump = (int)(180.0 / V.dpp);
+  int jump = (int)(180.0 / V.dppx);
   for (int i = 0; i < nl; i++) {
     int n = (uint16_t)rd16(p);
-    double minlat = rd16(p + 2) / 100.0, minlon = rd16(p + 4) / 100.0;
-    double maxlat = rd16(p + 6) / 100.0, maxlon = rd16(p + 8) / 100.0;
+    double minlat = lat_off + rd16(p + 2) * scale, minlon = rd16(p + 4) * scale;
+    double maxlat = lat_off + rd16(p + 6) * scale, maxlon = rd16(p + 8) * scale;
     const uint8_t *pts = p + 10;
     p = pts + n * 4;
     if (maxlat < lat_bot || minlat > lat_top) continue;
@@ -312,11 +398,42 @@ static void render_borders(const uint8_t *b) {
     int x0 = 0, y0 = 0;
     for (int k = 0; k < n; k++) {
       int x1, y1;
-      to_px(rd16(pts + k * 4) / 100.0, rd16(pts + k * 4 + 2) / 100.0, x1, y1);
+      to_px(lat_off + rd16(pts + k * 4) * scale, rd16(pts + k * 4 + 2) * scale, x1, y1);
       if (k > 0 && abs(x1 - x0) < jump) line(x0, y0, x1, y1, c, alpha);
       x0 = x1;
       y0 = y1;
     }
+  }
+}
+
+static void render_borders(const uint8_t *b) {
+  const uint16_t c = rgb(255, 236, 190);
+  if (V.detail) {   // genauere Grenzen und Bundeslaender
+    Detail d = detail();
+    if (d.ok) {
+      render_lines(d.states, 0.001, 40.0, rgb(230, 230, 230), 13);
+      render_lines(d.borders, 0.001, 40.0, c, 28);
+      return;
+    }
+  }
+  if (!b || memcmp(b, "BRD1", 4) != 0) return;
+  render_lines(b + 4, 0.01, 0.0, c, V.dpp < 0.15 ? 26 : 20);
+}
+
+// Staedte der Detailansicht als kleine Punkte (Beschriftung uebernimmt die Oberflaeche)
+static void render_cities() {
+  Detail d = detail();
+  if (!d.ok) return;
+  int n = (uint16_t)rd16(d.cities);
+  const uint8_t *p = d.cities + 2;
+  for (int i = 0; i < n; i++) {
+    MapCity c;
+    p = next_city(p, c);
+    int x, y;
+    to_px(c.lat, c.lon, x, y);
+    int r = c.rank == 0 ? 3 : 2;
+    disc(x, y, r + 1, rgb(0, 0, 0));
+    disc(x, y, r, rgb(235, 235, 235));
   }
 }
 
@@ -345,9 +462,9 @@ static void render_zones(uint8_t mask) {
   int nz = (uint16_t)rd16(b + 4);
   const uint8_t *p = b + 6;
   double lat_top = V.lat_c + V.h / 2.0 * V.dpp, lat_bot = V.lat_c - V.h / 2.0 * V.dpp;
-  double half_w = V.w / 2.0 * V.dpp;
+  double half_w = V.w / 2.0 * V.dppx;
   bool whole_world = half_w >= 180.0;
-  int jump = (int)(180.0 / V.dpp);
+  int jump = (int)(180.0 / V.dppx);
   uint32_t alpha = V.dpp < 0.15 ? 24 : 18;
   for (int i = 0; i < nz; i++) {
     uint8_t typ = p[0];
@@ -385,7 +502,7 @@ static void render_grid() {
   double lon_min, lat_max, lon_max, lat_min;
   map_view_to_latlon(V, 0, 0, lat_max, lon_min);
   map_view_to_latlon(V, W, H, lat_min, lon_max);
-  double span = W * V.dpp;
+  double span = W * V.dppx;
   // senkrechte Linien nur zwischen den Polen
   double fx, fy_top, fy_bot;
   map_view_to_xy(V, 90, V.lon_c, fx, fy_top);
@@ -427,7 +544,7 @@ static void great_circle(double lat1, double lon1, double lat2, double lon2, uin
     int sx, sy;
     to_px(atan2(z, sqrt(x * x + y * y)) / DEG, atan2(y, x) / DEG, sx, sy);
     // Segmente ueber die "Rueckseite" des Ausschnitts (Sprung um ~360 Grad) auslassen
-    if (i > 0 && abs(sx - px0) < (int)(180.0 / V.dpp)) line(px0, py0, sx, sy, c, 20);
+    if (i > 0 && abs(sx - px0) < (int)(180.0 / V.dppx)) line(px0, py0, sx, sy, c, 20);
     px0 = sx; py0 = sy;
   }
 }
@@ -449,7 +566,7 @@ static void polyline(const float *lat, const float *lon, int n, bool closed, uin
   int x0, y0, xs, ys;
   to_px(lat[0], lon[0], x0, y0);
   xs = x0; ys = y0;
-  int jump = (int)(180.0 / V.dpp);
+  int jump = (int)(180.0 / V.dppx);
   for (int i = 1; i < n; i++) {
     int x1, y1;
     to_px(lat[i], lon[i], x1, y1);
@@ -514,6 +631,7 @@ void map_render(uint16_t *buf, const MapView &v, time_t t, double qth_lat, doubl
   if (ov && ov->muf) render_muf(ov->muf);
   render_grid();
   if (ov && ov->borders) render_borders(maps_borders());
+  if (V.detail) render_cities();
   if (ov && (ov->cq_zones || ov->itu_zones)) render_zones((ov->cq_zones ? 1 : 0) | (ov->itu_zones ? 2 : 0));
   if (ov && ov->muf && ov->iono_n) render_ionosondes(*ov);
   if (ov && ov->fp_n > 2) polyline(ov->fp_lat, ov->fp_lon, ov->fp_n, true, rgb(255, 255, 255), 22);

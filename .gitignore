@@ -12,3 +12,4 @@ sdkconfig.defaults
 sdkconfig.waveshare-s3-lcd7
 sdkconfig.*
 dependencies.lock
+.cache/

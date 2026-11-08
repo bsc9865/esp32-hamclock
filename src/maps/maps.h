@@ -24,3 +24,5 @@ MapImage maps_image();
 const uint8_t *maps_borders();
 // CQ-/ITU-Zonen (assets/zones.bin, siehe scripts/gen_zones.py)
 const uint8_t *maps_zones();
+// Detailkarte Deutschland (assets/detail.bin, siehe scripts/gen_detail.py)
+const uint8_t *maps_detail();

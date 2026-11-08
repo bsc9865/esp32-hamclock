@@ -11,6 +11,9 @@ extern const uint8_t zones_start[] asm("_binary_assets_zones_bin_start");
 const uint8_t *maps_borders() { return borders_start; }
 const uint8_t *maps_zones() { return zones_start; }
 
+extern const uint8_t detail_start[] asm("_binary_assets_detail_bin_start");
+const uint8_t *maps_detail() { return detail_start; }
+
 // Paletten in ausgerichteten RAM kopieren (eingebettete Daten sind evtl. nicht 2-Byte-ausgerichtet)
 static uint16_t pal[32];
 

@@ -24,7 +24,12 @@ static constexpr int MAX_LABELS = 200;
 static constexpr int MAX_APRS = 80;
 static AprsStation *aprs_view;   // PSRAM
 static int n_aprs = 0;
-static constexpr float ZOOM_MIN = 1.0f, ZOOM_MAX = 8.0f;
+static constexpr float ZOOM_MIN = 1.0f, ZOOM_MAX_WORLD = 8.0f, ZOOM_MAX_DE = 6.0f;
+static bool de_mode = false;                       // Detailansicht Deutschland
+static float zoom_max() { return de_mode ? ZOOM_MAX_DE : ZOOM_MAX_WORLD; }
+// gemerkter Ausschnitt je Ansicht (0 = Welt, 1 = Deutschland)
+static struct { float zoom; double lat, lon; } saved[2] = {{1.0f, 0, 0}, {1.0f, DETAIL_LAT_C, DETAIL_LON_C}};
+static lv_obj_t *de_btn;
 
 static lv_obj_t *scr, *scr_prev, *img, *slider, *l_zoom, *info_box, *info_lbl;
 static lv_obj_t *labels[MAX_LABELS];
@@ -39,32 +44,58 @@ static uint32_t seen_seq;
 static time_t last_render;
 
 // ---------- Rendern ----------
-static bool add_label(int &k, double lat, double lon, const char *txt, uint32_t color) {
+// Beschriftungen werden in Prioritaetsreihenfolge gesetzt; was eine schon gesetzte ueberdecken
+// wuerde, entfaellt (gegen den "Matsch" bei vielen Stationen auf engem Raum)
+static lv_area_t *placed;   // MAX_LABELS, PSRAM
+static MapCity *cities;     // MAX_CITIES, PSRAM
+static constexpr int MAX_CITIES = 80;
+
+static bool add_label(int &k, double lat, double lon, const char *txt, uint32_t color, int dx = 7, int dy = -9) {
   if (k >= MAX_LABELS) return false;
   double x, y;
   map_view_to_xy(view, lat, lon, x, y);
   if (x < 0 || y < 12 || x > W - 60 || y > H) return true;
+  lv_point_t sz;
+  lv_txt_get_size(&sz, txt, &lv_font_montserrat_12, 0, 0, LV_COORD_MAX, LV_TEXT_FLAG_NONE);
+  lv_area_t a = {(lv_coord_t)(x + dx), (lv_coord_t)(y + dy), (lv_coord_t)(x + dx + sz.x + 4), (lv_coord_t)(y + dy + sz.y)};
+  for (int i = 0; i < k; i++)
+    if (a.x1 <= placed[i].x2 + 2 && a.x2 + 2 >= placed[i].x1 && a.y1 <= placed[i].y2 && a.y2 >= placed[i].y1) return true;
+  placed[k] = a;
   lv_obj_t *l = labels[k++];
   lv_label_set_text(l, txt);
   lv_obj_set_style_text_color(l, lv_color_hex(color), 0);
-  lv_obj_set_pos(l, (int)x + 7, (int)y - 9);
+  lv_obj_set_pos(l, a.x1, a.y1);
   lv_obj_clear_flag(l, LV_OBJ_FLAG_HIDDEN);
   return true;
 }
 
 static void place_labels() {
   int k = 0;
-  if (zoom >= 2.0f) {
+  // 1. Satelliten
+  const SatRow *sr;
+  int ns = satpanel_rows(&sr);
+  for (int i = 0; i < ns; i++)
+    if (sr[i].valid && !add_label(k, sr[i].st.lat, sr[i].st.lon, sr[i].name, sr[i].st.el > 0 ? 0x4ADE80 : 0xE5E7EB)) break;
+  // 2. DX-Spots (nicht in der DE-Ansicht: dort liegen alle DL-Spots auf dem Laendermittelpunkt)
+  if (zoom >= 2.0f && !de_mode) {
     const Spot *sp;
     int n = dxpanel_spots(&sp);
     for (int i = 0; i < n; i++)
       if (sp[i].ent >= 0 && !add_label(k, sp[i].lat, sp[i].lon, sp[i].dx, BAND_COLORS[sp[i].band])) break;
+  }
+  // 3. Aktivierungen
+  if (zoom >= 2.0f || de_mode) {
     const Activation *ac;
     int m = actpanel_items(&ac);
     for (int i = 0; i < m; i++)
       if (!add_label(k, ac[i].lat, ac[i].lon, ac[i].call, ACT_COLORS[ac[i].type])) break;
   }
-  // Ionosonden mit Messwert (bei eingeschalteter MUF-Ebene)
+  // 4. APRS-Stationen (Welt ab Zoom 4, Deutschland immer)
+  if (zoom >= 4.0f || de_mode)
+    for (int i = 0; i < n_aprs; i++)
+      if (!add_label(k, aprs_view[i].p.lat, aprs_view[i].p.lon, aprs_view[i].p.call,
+                     APRS_COLORS[aprs_category(aprs_view[i].p.sym_table, aprs_view[i].p.sym_code)])) break;
+  // 5. Ionosonden mit Messwert (bei eingeschalteter MUF-Ebene)
   if (g_settings.layers & LAYER_MUF) {
     const Ionosonde *st;
     int ni = propdata_stations(&st);
@@ -74,12 +105,13 @@ static void place_labels() {
       if (!add_label(k, st[i].lat, st[i].lon, v, map_muf_color(st[i].mufd))) break;
     }
   }
-  // APRS-Stationen ab Zoom 4 beschriften
-  if (zoom >= 4.0f)
-    for (int i = 0; i < n_aprs; i++)
-      if (!add_label(k, aprs_view[i].p.lat, aprs_view[i].p.lon, aprs_view[i].p.call,
-                     APRS_COLORS[aprs_category(aprs_view[i].p.sym_table, aprs_view[i].p.sym_code)])) break;
-  // CQ-/ITU-Zonennummern
+  // 6. Staedte (DE-Ansicht, nach Groesse)
+  if (de_mode) {
+    int nc = map_detail_cities(cities, MAX_CITIES);
+    for (int i = 0; i < nc; i++)
+      if (!add_label(k, cities[i].lat, cities[i].lon, cities[i].name, cities[i].rank == 0 ? 0xF3F4F6 : 0xC8CDD5, 5, -7)) break;
+  }
+  // 7. CQ-/ITU-Zonennummern
   uint8_t zmask = ((g_settings.layers & LAYER_CQ) ? 1 : 0) | ((g_settings.layers & LAYER_ITU) ? 2 : 0);
   if (zmask) {
     static ZoneLabel zl[140];
@@ -90,11 +122,19 @@ static void place_labels() {
       if (!add_label(k, zl[i].lat, zl[i].lon, t, ZONE_COLORS[zl[i].type])) break;
     }
   }
-  // Satelliten immer beschriften
-  const SatRow *sr;
-  int ns = satpanel_rows(&sr);
-  for (int i = 0; i < ns; i++)
-    if (sr[i].valid && !add_label(k, sr[i].st.lat, sr[i].st.lon, sr[i].name, sr[i].st.el > 0 ? 0x4ADE80 : 0xE5E7EB)) break;
+  // 8. Locator-Quadrate (DE-Ansicht), oben links im Quadrat
+  if (de_mode) {
+    double lat0, lon0, lat1, lon1;
+    map_view_to_latlon(view, 0, 0, lat1, lon0);
+    map_view_to_latlon(view, W, H, lat0, lon1);
+    for (double la = floor(lat0); la <= lat1; la += 1.0)
+      for (double lo = floor(lon0 / 2) * 2; lo <= lon1; lo += 2.0) {
+        char loc[7];
+        latlon_to_maidenhead(la + 0.5, lo + 1.0, loc);
+        loc[4] = 0;
+        if (!add_label(k, la + 1.0, lo, loc, 0x94A3B8, 2, 2)) break;
+      }
+  }
   for (; k < MAX_LABELS; k++) lv_obj_add_flag(labels[k], LV_OBJ_FLAG_HIDDEN);
 }
 
@@ -110,14 +150,14 @@ static void render(bool smooth = true) {
   map_set_smoothing(smooth);
   last_smooth = smooth;
   static MapSpot ms[180];
-  int m = dxpanel_map_spots(ms, 50);
+  int m = de_mode ? 0 : dxpanel_map_spots(ms, 50);
   m += actpanel_map_spots(ms + m, 84 - m);
   m += satpanel_map_spots(ms + m, 100 - m);
   n_aprs = (g_settings.layers & LAYER_APRS) ? aprs_snapshot(aprs_view, MAX_APRS) : 0;
   for (int i = 0; i < n_aprs && m < 180; i++)
     ms[m++] = {aprs_view[i].p.lat, aprs_view[i].p.lon,
                APRS_COLORS[aprs_category(aprs_view[i].p.sym_table, aprs_view[i].p.sym_code)], SHAPE_DOT};
-  view = map_view_zoom(W, H, view.lat_c, view.lon_c, zoom);
+  view = de_mode ? map_view_detail(W, H, view.lat_c, view.lon_c, zoom) : map_view_zoom(W, H, view.lat_c, view.lon_c, zoom);
   last_render = time(nullptr);
   MapOverlays ov;
   if (g_settings.layers & LAYER_AURORA) ov.aurora = spacewx_aurora();
@@ -161,7 +201,7 @@ static void update_zoom_label() {
 }
 
 static void set_zoom(float z) {
-  zoom = fminf(ZOOM_MAX, fmaxf(ZOOM_MIN, z));
+  zoom = fminf(zoom_max(), fmaxf(ZOOM_MIN, z));
   lv_slider_set_value(slider, (int)lroundf(zoom * 10), LV_ANIM_OFF);
   update_zoom_label();
   render_interactive();
@@ -178,7 +218,7 @@ static void show_info(const char *text) {
 static void tap(int x, int y) {
   // Spot in der Naehe?
   const Spot *sp;
-  int n = dxpanel_spots(&sp);
+  int n = de_mode ? 0 : dxpanel_spots(&sp);
   int best = -1;
   double best_d = 22 * 22;
   for (int i = 0; i < n; i++) {
@@ -263,7 +303,7 @@ static void img_event(lv_event_t *e) {
       lv_obj_set_pos(img, 0, 0);
       tap(p.x, p.y);
     } else {
-      view.lon_c -= drag.x * view.dpp;
+      view.lon_c -= drag.x * view.dppx;
       view.lat_c += drag.y * view.dpp;
       render_interactive();
     }
@@ -318,12 +358,15 @@ void mapscreen_open() {
   buf = (uint16_t *)heap_caps_malloc(W * H * 2, MALLOC_CAP_SPIRAM);
   if (!buf) return;
   if (!aprs_view) aprs_view = (AprsStation *)heap_caps_calloc(MAX_APRS, sizeof(AprsStation), MALLOC_CAP_SPIRAM);
+  if (!placed) placed = (lv_area_t *)heap_caps_calloc(MAX_LABELS, sizeof(lv_area_t), MALLOC_CAP_SPIRAM);
+  if (!cities) cities = (MapCity *)heap_caps_calloc(MAX_CITIES, sizeof(MapCity), MALLOC_CAP_SPIRAM);
+  if (!aprs_view || !placed || !cities) { heap_caps_free(buf); buf = nullptr; return; }
   memset(buf, 0, W * H * 2);
   LatLon q;
   maidenhead_to_latlon(g_settings.loc, q);
   qlat = q.lat;
   qlon = q.lon;
-  if (zoom <= 1.0f) { view.lat_c = 0; view.lon_c = 0; }
+  if (zoom <= 1.0f && !de_mode) { view.lat_c = 0; view.lon_c = 0; }
 
   scr_prev = lv_scr_act();
   scr = lv_obj_create(nullptr);
@@ -404,12 +447,29 @@ void mapscreen_open() {
   }, LV_EVENT_RELEASED, nullptr);
   mk_btn(136, 8, 100, 40, LV_SYMBOL_HOME "  QTH", on_qth);
 
+  // Detailansicht Deutschland (eigener Zoombereich, Ausschnitt je Ansicht gemerkt)
+  de_btn = mk_btn(244, 8, 64, 40, "DE", nullptr);
+  lv_obj_add_flag(de_btn, LV_OBJ_FLAG_CHECKABLE);
+  lv_obj_set_style_bg_color(de_btn, lv_color_hex(0xFFD54A), LV_STATE_CHECKED);
+  lv_obj_set_style_bg_opa(de_btn, LV_OPA_80, LV_STATE_CHECKED);
+  lv_obj_set_style_text_color(de_btn, lv_color_hex(0x000000), LV_STATE_CHECKED);
+  if (de_mode) lv_obj_add_state(de_btn, LV_STATE_CHECKED);
+  lv_obj_add_event_cb(de_btn, [](lv_event_t *e) {
+    saved[de_mode] = {zoom, view.lat_c, view.lon_c};
+    de_mode = lv_obj_has_state(lv_event_get_target(e), LV_STATE_CHECKED);
+    zoom = saved[de_mode].zoom;
+    view.lat_c = saved[de_mode].lat;
+    view.lon_c = saved[de_mode].lon;
+    lv_slider_set_range(slider, (int)(ZOOM_MIN * 10), (int)(zoom_max() * 10));
+    set_zoom(zoom);
+  }, LV_EVENT_VALUE_CHANGED, nullptr);
+
   // Zoom: Plus, Regler, Minus (rechts)
   mk_btn(740, 8, 52, 48, LV_SYMBOL_PLUS, [](lv_event_t *) { set_zoom(zoom < 2 ? zoom + 0.5f : zoom + 1.0f); });
   slider = lv_slider_create(scr);
   lv_obj_set_size(slider, 18, 300);
   lv_obj_set_pos(slider, 757, 84);
-  lv_slider_set_range(slider, (int)(ZOOM_MIN * 10), (int)(ZOOM_MAX * 10));
+  lv_slider_set_range(slider, (int)(ZOOM_MIN * 10), (int)(zoom_max() * 10));
   lv_slider_set_value(slider, (int)(zoom * 10), LV_ANIM_OFF);
   lv_obj_set_ext_click_area(slider, 16);
   lv_obj_add_event_cb(slider, [](lv_event_t *) {
