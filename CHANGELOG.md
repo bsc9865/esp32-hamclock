@@ -4,6 +4,8 @@ Alle wichtigen Änderungen an diesem Projekt. Format nach [Keep a Changelog](htt
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unreleased]
+### Behoben
+- Ausbreitung: Wenn KC2G/GIRO stockt (weniger als 3 Ionosonden mit Messwerten der letzten 2 h), werden Messwerte bis 8 h verwendet und gelb als veraltet gekennzeichnet, statt gar nichts anzuzeigen
 
 ## [0.16.1] - 2026-11-08
 ### Geändert

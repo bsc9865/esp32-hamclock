@@ -13,6 +13,9 @@ static time_t grid_t = 0;
 static uint32_t grid_seq = 0xFFFFFFFF;
 
 uint32_t propdata_seq() { return seq; }
+
+static bool stale = false;        // nur aeltere Messwerte verfuegbar
+bool propdata_stale() { return stale; }
 const PropModel *propdata_model() { return cur >= 0 ? model[cur] : nullptr; }
 
 int propdata_stations(const Ionosonde **out) {
@@ -27,6 +30,11 @@ bool propdata_fetch() {
   int next = cur == 0 ? 1 : 0;
   time_t now = time(nullptr);
   int n = prop_parse_kc2g(body.c_str(), now, 2 * 3600, stations[next], 128);
+  bool old = false;
+  if (n < 3) {   // KC2G/GIRO stockt gelegentlich: dann aeltere Messwerte (bis 8 h) mit Hinweis
+    n = prop_parse_kc2g(body.c_str(), now, 8 * 3600, stations[next], 128);
+    old = true;
+  }
   body = String();
   if (n < 3) {
     Serial.printf("KC2G: zu wenige aktuelle Ionosonden (%d)\n", n);
@@ -36,6 +44,7 @@ bool propdata_fetch() {
   prop_build(*model[next], stations[next], n, now, [] { vTaskDelay(1); });   // Watchdog/IDLE nicht aushungern
   n_st[next] = n;
   cur = next;
+  stale = old;
   seq++;
   Serial.printf("KC2G: %d Ionosonden, Modell in %lu ms berechnet\n", n, millis() - t0);
   return true;

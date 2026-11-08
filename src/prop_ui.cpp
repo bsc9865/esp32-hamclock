@@ -72,8 +72,13 @@ static void refresh() {
   const Ionosonde *st;
   int n = propdata_stations(&st);
   char info[128];
-  snprintf(info, sizeof info, "MUF(3000) ueber %s: %.0f MHz   |   %d aktuelle Ionosonden (KC2G/GIRO)%s",
-           g_settings.loc, here, n, offset == 0 ? "   |   inkl. D-RAP" : "");
+  if (propdata_stale())
+    snprintf(info, sizeof info, "MUF(3000) ueber %s: %.0f MHz   |   %d Ionosonden, Messwerte bis 8 h alt (KC2G stockt)%s",
+             g_settings.loc, here, n, offset == 0 ? "   |   inkl. D-RAP" : "");
+  else
+    snprintf(info, sizeof info, "MUF(3000) ueber %s: %.0f MHz   |   %d aktuelle Ionosonden (KC2G/GIRO)%s",
+             g_settings.loc, here, n, offset == 0 ? "   |   inkl. D-RAP" : "");
+  lv_obj_set_style_text_color(l_info, propdata_stale() ? lv_color_hex(0xEAB308) : C_TEXT, 0);
   lv_label_set_text(l_info, info);
   // die drei naechsten Ionosonden
   int best[3] = {-1, -1, -1};
