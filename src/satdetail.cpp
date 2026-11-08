@@ -134,7 +134,7 @@ static void update() {
   lv_obj_set_pos(l_full, 150 + lv_obj_get_width(l_title) + 4, 20);
   const SatState &s = d->st;
   char buf[200];
-  snprintf(buf, sizeof buf, "Az %.0f\xC2\xB0   El %.1f\xC2\xB0   %.0f km   %+.2f km/s   Hoehe %.0f km",
+  snprintf(buf, sizeof buf, "Az %.0f\xC2\xB0  El %.1f\xC2\xB0  %.0f km  %+.2f km/s  Hoehe %.0f km",
            s.az, s.el, s.range_km, d->range_rate, s.alt_km);
   lv_label_set_text(l_live, buf);
   bool visible = d->valid && s.el > 0;
@@ -281,8 +281,8 @@ void satdetail_open(int norad) {
 
   // Bodenspur auf der Karte an/aus
   map_btn = lv_btn_create(scr);
-  lv_obj_set_pos(map_btn, 616, 8);
-  lv_obj_set_size(map_btn, 176, 40);
+  lv_obj_set_pos(map_btn, 572, 8);
+  lv_obj_set_size(map_btn, 220, 40);
   lv_obj_add_flag(map_btn, LV_OBJ_FLAG_CHECKABLE);
   lv_obj_set_style_bg_color(map_btn, lv_color_hex(0x1F2937), 0);
   lv_obj_set_style_bg_color(map_btn, lv_color_hex(0xB45309), LV_STATE_CHECKED);
@@ -299,7 +299,9 @@ void satdetail_open(int norad) {
   mk_label(scr, PX - 10, 456, &lv_font_montserrat_12, C_DIM, "Frequenzen: SatNOGS DB (CC BY-SA 4.0)");
 
   const int RX = 372;
-  l_live = mk_label(scr, RX, 60, &lv_font_montserrat_16, C_TEXT);
+  l_live = mk_label(scr, RX, 62, &lv_font_montserrat_14, C_TEXT);
+  lv_label_set_long_mode(l_live, LV_LABEL_LONG_CLIP);
+  lv_obj_set_width(l_live, 800 - RX - 6);
   mk_label(scr, RX, 90, &lv_font_montserrat_14, C_ACCENT, "Naechste Ueberfluege (Ortszeit)");
   l_passes = mk_label(scr, RX, 110, &lv_font_montserrat_14, C_TEXT);
   lv_obj_set_style_text_line_space(l_passes, 2, 0);
