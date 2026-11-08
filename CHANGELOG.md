@@ -4,6 +4,8 @@ Alle wichtigen Änderungen an diesem Projekt. Format nach [Keep a Changelog](htt
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unreleased]
+
+## [0.14.0] - 2026-11-08
 ### Geändert
 - Schlichte Karte statt NASA-Fotos: Land und Wasser in gedeckten Flächenfarben (Natural Earth, mit Seen und geglätteten Küsten), damit Aurora, D-RAP, MUF, Zonen und Grenzen besser hervortreten
 - Tag und Nacht teilen sich ein Bild mit 16 Farben (4 Bit pro Pixel) und unterscheiden sich nur in der Palette: 640 KB statt 2,5 MB, rund 1,9 MB mehr freies PSRAM
