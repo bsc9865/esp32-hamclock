@@ -4,6 +4,11 @@ Alle wichtigen Änderungen an diesem Projekt. Format nach [Keep a Changelog](htt
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unreleased]
+### Geändert
+- Wetterseite neu gestaltet: gezeichnete Wettersymbole (Sonne, Mond, Wolken, Regen, Schnee, Gewitter, Nebel; Tag/Nacht nach Sonnenstand am QTH), 12 Stunden als Spalten mit Symbol, Temperaturkurve und Regenbalken, Nachtstunden dunkel hinterlegt, 3-Tage-Karten mit farbigen Höchst-/Tiefstwerten
+
+### Hinzugefügt
+- Diagnose (Basic-Auth): `/screenshot.bmp` liefert den Bildschirminhalt, `POST /open` (mit CSRF-Token) öffnet Wetterseite oder Vollbild-Karte für Screenshots
 
 ## [0.17.0] - 2026-11-08
 ### Geändert

@@ -7,6 +7,11 @@
 #include "watch.h"
 #include "dxcluster.h"
 #include "cty.h"
+#include "display.h"
+#include "board_pins.h"
+#include "weather_ui.h"
+#include "mapscreen.h"
+#include <atomic>
 
 static WebServer *srv;
 static char csrf[17];   // Zufallstoken je Start: Formulare fremder Seiten koennen es nicht kennen
@@ -249,10 +254,52 @@ static void handle_watch_add() {
   page(msg.c_str(), added);
 }
 
+// Bildschirminhalt als BMP (16 Bit, RGB565), zeilenweise direkt aus dem Bildspeicher
+static void handle_screenshot() {
+  const uint16_t *fb = display_framebuffer();
+  if (!fb) { srv->send(503, "text/plain", "kein Bildspeicher"); return; }
+  const uint32_t w = LCD_WIDTH, h = LCD_HEIGHT, img = w * h * 2, off = 14 + 40 + 12;
+  uint8_t hdr[off] = {0};
+  auto put32 = [&](int i, uint32_t v) { for (int k = 0; k < 4; k++) hdr[i + k] = (v >> (8 * k)) & 0xFF; };
+  hdr[0] = 'B'; hdr[1] = 'M';
+  put32(2, off + img);
+  put32(10, off);
+  put32(14, 40);
+  put32(18, w);
+  put32(22, (uint32_t)(-(int32_t)h));   // negativ = von oben nach unten
+  hdr[26] = 1; hdr[28] = 16;
+  put32(30, 3);                          // BI_BITFIELDS
+  put32(34, img);
+  put32(54, 0xF800); put32(58, 0x07E0); put32(62, 0x001F);
+  srv->setContentLength(off + img);
+  srv->send(200, "image/bmp", "");
+  srv->sendContent((const char *)hdr, off);
+  for (uint32_t y = 0; y < h; y += 20) srv->sendContent((const char *)(fb + y * w), w * 2 * 20);
+}
+
+// Seite am Geraet oeffnen (LVGL nur aus loop(), daher nur vormerken)
+static std::atomic<int> open_req{0};   // 1 = Wetter, 2 = Vollbild-Karte
+
+void webconfig_poll_ui() {
+  int r = open_req.exchange(0);
+  if (r == 1) weather_ui_open();
+  else if (r == 2) mapscreen_open();
+}
+
+static void handle_open() {
+  String pg = srv->arg("page");
+  int r = pg == "weather" ? 1 : (pg == "map" ? 2 : 0);
+  if (!r) { srv->send(400, "text/plain", "page=weather|map"); return; }
+  open_req = r;
+  srv->send(200, "text/plain", "ok\n");
+}
+
 void webconfig_register(WebServer &server) {
   srv = &server;
   snprintf(csrf, sizeof csrf, "%08lx%08lx", (unsigned long)esp_random(), (unsigned long)esp_random());
   server.on("/watch", HTTP_POST, [] { if (authorized() && token_ok()) handle_watch_add(); });
   server.on("/config", HTTP_GET, [] { if (authorized()) page(); });
   server.on("/config", HTTP_POST, [] { if (authorized() && token_ok()) handle_post(); });
+  server.on("/screenshot.bmp", HTTP_GET, [] { if (authorized()) handle_screenshot(); });
+  server.on("/open", HTTP_POST, [] { if (authorized() && token_ok()) handle_open(); });
 }

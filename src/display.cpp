@@ -113,3 +113,9 @@ void display_init() {
   Serial.printf("Display: %dx%d @ %d MHz, Bounce-Buffer %d Zeilen\n",
                 LCD_WIDTH, LCD_HEIGHT, LCD_PCLK_HZ / 1000000, BOUNCE_LINES);
 }
+
+const uint16_t *display_framebuffer() {
+  void *fb = nullptr;
+  if (panel) esp_lcd_rgb_panel_get_frame_buffer(panel, 1, &fb);
+  return (const uint16_t *)fb;
+}

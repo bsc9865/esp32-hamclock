@@ -10,6 +10,7 @@
 #include "dxcluster.h"
 #include "sats.h"
 #include "satfreq.h"
+#include "webconfig.h"
 #include "astro.h"
 #include "ota.h"
 #include "weather.h"
@@ -45,6 +46,7 @@ void setup() {
 
 void loop() {
   settings_apply_pending();
+  webconfig_poll_ui();
   ota_loop();
   lv_timer_handler();
   delay(5);
