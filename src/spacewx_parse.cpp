@@ -4,51 +4,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "json_scan.h"
 #include "timeutil.h"
-
-// Sucht ab p das naechste "key": und liefert den Zeiger hinter den Doppelpunkt (Leerzeichen uebersprungen)
-static const char *find_key(const char *p, const char *end, const char *key) {
-  size_t kl = strlen(key);
-  for (const char *q = p; q && q < end; q++) {
-    q = strchr(q, '"');
-    if (!q || q >= end) return nullptr;
-    if (strncmp(q + 1, key, kl) == 0 && q[1 + kl] == '"') {
-      const char *v = q + 2 + kl;
-      while (*v == ' ' || *v == ':') v++;
-      return v;
-    }
-  }
-  return nullptr;
-}
-
-// Iteriert ueber die Objekte {...} eines flachen JSON-Arrays
-template <typename F>
-static void for_each_object(const char *json, F f) {
-  const char *p = json;
-  while ((p = strchr(p, '{'))) {
-    const char *e = p + 1;
-    bool in_str = false;
-    int depth = 1;
-    for (; *e && depth > 0; e++) {
-      if (*e == '\\' && in_str) { if (e[1]) e++; continue; }
-      if (*e == '"') in_str = !in_str;
-      else if (!in_str && *e == '{') depth++;
-      else if (!in_str && *e == '}') depth--;
-    }
-    if (depth != 0) return;
-    f(p, e);
-    p = e;
-  }
-}
 
 static time_t str_time(const char *v) { return v && *v == '"' ? parse_iso_utc(v + 1) : 0; }
 
 static int parse_series(const char *json, const char *vkey, WxPoint *out, int max) {
   int n = 0;
-  for_each_object(json, [&](const char *b, const char *e) {
+  json_for_each_object(json, [&](const char *b, const char *e) {
     if (n >= max) return;
-    const char *t = find_key(b, e, "time_tag");
-    const char *v = find_key(b, e, vkey);
+    const char *t = json_find_key(b, e, "time_tag");
+    const char *v = json_find_key(b, e, vkey);
     if (!t || !v || *v == 'n') return;   // null
     out[n].t = str_time(t);
     out[n].v = (float)atof(*v == '"' ? v + 1 : v);
@@ -62,12 +28,12 @@ int wx_parse_flux(const char *json, WxPoint *out, int max) { return parse_series
 
 int wx_parse_xray(const char *json, WxPoint *out, int max) {
   int n = 0;
-  for_each_object(json, [&](const char *b, const char *e) {
+  json_for_each_object(json, [&](const char *b, const char *e) {
     if (n >= max) return;
-    const char *en = find_key(b, e, "energy");
+    const char *en = json_find_key(b, e, "energy");
     if (!en || strncmp(en, "\"0.1-0.8nm\"", 11) != 0) return;
-    const char *t = find_key(b, e, "time_tag");
-    const char *v = find_key(b, e, "flux");
+    const char *t = json_find_key(b, e, "time_tag");
+    const char *v = json_find_key(b, e, "flux");
     if (!t || !v || *v == 'n') return;
     out[n].t = str_time(t);
     out[n].v = (float)atof(v);
@@ -110,10 +76,10 @@ int wx_parse_alerts(const char *json, WxAlert *out, int max) {
   static const char *heads[] = {"ALERT:", "WARNING:", "WATCH:", "SUMMARY:", "EXTENDED WARNING:",
                                 "CONTINUED ALERT:", "CANCEL WARNING:", "CANCEL WATCH:", "CANCEL SUMMARY:"};
   int n = 0;
-  for_each_object(json, [&](const char *b, const char *e) {
+  json_for_each_object(json, [&](const char *b, const char *e) {
     if (n >= max) return;
-    const char *t = find_key(b, e, "issue_datetime");
-    const char *m = find_key(b, e, "message");
+    const char *t = json_find_key(b, e, "issue_datetime");
+    const char *m = json_find_key(b, e, "message");
     if (!t || !m) return;
     WxAlert &a = out[n];
     a.t = str_time(t);

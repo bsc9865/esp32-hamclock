@@ -1,4 +1,6 @@
+#include "task_util.h"
 #include "sats.h"
+#include <atomic>
 #include <Arduino.h>
 #include <LittleFS.h>
 #include <Preferences.h>
@@ -16,7 +18,7 @@ static Satellite *catalog;                // alle Satelliten aus der TLE-Datei (
 static int n_catalog = 0;
 static int fav[SAT_MAX_FAV], n_fav = 0;
 static SatView *view;                     // veroeffentlichte Ergebnisse (PSRAM)
-static volatile uint32_t seq = 0;
+static std::atomic<uint32_t> seq{0};
 static volatile int sel = 0;
 static volatile bool recalc_passes = true;
 static Observer qth;
@@ -28,7 +30,7 @@ uint32_t sats_seq() { return seq; }
 // Detailansicht
 static volatile int det_norad = 0;
 static SatDetail *det;                    // veroeffentlicht (PSRAM), Schutz durch view_mtx
-static volatile uint32_t det_seq = 0;
+static std::atomic<uint32_t> det_seq{0};
 
 void sats_detail_open(int norad) { det_norad = norad; }
 uint32_t sats_detail_seq() { return det_seq; }
@@ -184,15 +186,24 @@ static Satellite *find(int norad) {
   return nullptr;
 }
 
+// Kopie eines Katalogeintrags unter kurzer Sperre (die Bahnberechnung laeuft danach ohne Sperre,
+// damit Oberflaeche und Abruf-Task nicht warten muessen)
+static bool copy_sat(int norad, Satellite &out) {
+  xSemaphoreTake(mtx, portMAX_DELAY);
+  Satellite *s = find(norad);
+  if (s) out = *s;
+  xSemaphoreGive(mtx);
+  return s != nullptr;
+}
+
 // Detailwerte fuer den geoeffneten Satelliten (jede Sekunde); Ueberfluege nur bei Bedarf neu
 static void update_detail(time_t now) {
   static SatDetail *w = (SatDetail *)heap_caps_calloc(1, sizeof(SatDetail), MALLOC_CAP_SPIRAM);
+  static Satellite *s = (Satellite *)heap_caps_calloc(1, sizeof(Satellite), MALLOC_CAP_SPIRAM);
   static time_t last_passes = 0;
   int norad = det_norad;
   if (!norad) { w->norad = 0; return; }
-  xSemaphoreTake(mtx, portMAX_DELAY);
-  Satellite *s = find(norad);
-  if (!s) { xSemaphoreGive(mtx); return; }
+  if (!copy_sat(norad, *s)) return;
   bool fresh = w->norad != norad;
   if (fresh) memset(w, 0, sizeof *w);
   w->norad = norad;
@@ -222,7 +233,6 @@ static void update_detail(time_t now) {
     }
     last_passes = now;
   }
-  xSemaphoreGive(mtx);
   xSemaphoreTake(view_mtx, portMAX_DELAY);
   *det = *w;
   xSemaphoreGive(view_mtx);
@@ -231,73 +241,95 @@ static void update_detail(time_t now) {
 
 static void sat_task(void *) {
   static SatView *work = (SatView *)heap_caps_calloc(1, sizeof(SatView), MALLOC_CAP_SPIRAM);
+  static Satellite *sats = (Satellite *)heap_caps_calloc(SAT_MAX_FAV + 1, sizeof(Satellite), MALLOC_CAP_SPIRAM);
   static SatPass passes[SAT_MAX_FAV];
   static bool has_pass[SAT_MAX_FAV];
   static int pass_norad[SAT_MAX_FAV];
   time_t last_pass = 0, last_track = 0, last_full = 0;
   int last_sel = -1;
+  int pass_next = SAT_MAX_FAV;   // naechster Favorit, dessen Ueberflug berechnet wird (>= nf: fertig)
+  uint32_t pass_t0 = 0;
   for (;;) {
     vTaskDelay(pdMS_TO_TICKS(1000));
     if (time(nullptr) < 1700000000 || n_catalog == 0) continue;
     time_t now = time(nullptr);
     update_detail(now);
-    // Liste, Bodenspur usw. alle 5 s (bzw. sofort nach Aenderung)
-    if (now - last_full < 5 && !recalc_passes && sel == last_sel) continue;
-    last_full = now;
 
-    xSemaphoreTake(mtx, portMAX_DELAY);   // Katalog waehrend der Berechnung sperren
-    int nf = n_fav;
+    // Favoriten und ausgewaehlten Satelliten kopieren (kurze Sperre)
     int ids[SAT_MAX_FAV];
+    bool present[SAT_MAX_FAV];
+    xSemaphoreTake(mtx, portMAX_DELAY);
+    int nf = n_fav;
     memcpy(ids, fav, sizeof ids);
+    for (int i = 0; i < nf; i++) {
+      Satellite *c = find(ids[i]);
+      present[i] = c != nullptr;
+      if (c) sats[i] = *c;
+    }
+    int cur_sel = sel;
+    Satellite *c = cur_sel ? find(cur_sel) : nullptr;
+    bool sel_ok = c != nullptr;
+    if (c) sats[SAT_MAX_FAV] = *c;
+    time_t tle_t = tle_time;
+    int n_cat = n_catalog;
+    xSemaphoreGive(mtx);
 
-    // Ueberfluege alle 15 min (oder nach Aenderung) bzw. wenn ein Ueberflug vorbei ist
+    // Ueberfluege alle 15 min (oder nach Aenderung) bzw. wenn einer vorbei ist; je Durchlauf ein Satellit
     bool expired = false;
     for (int i = 0; i < nf; i++) if (has_pass[i] && passes[i].los < now) expired = true;
-    if (recalc_passes || expired || now - last_pass > 15 * 60) {
-      uint32_t t0 = millis();
-      for (int i = 0; i < nf; i++) {
-        Satellite *s = find(ids[i]);
-        pass_norad[i] = ids[i];
-        has_pass[i] = s && s->passes(qth, now, now + 24 * 3600, 0, &passes[i], 1) == 1;
-      }
+    if (pass_next >= nf && (recalc_passes || expired || now - last_pass > 15 * 60)) {
       recalc_passes = false;
-      last_pass = now;
-      Serial.printf("Satelliten: Ueberfluege fuer %d Favoriten in %lu ms berechnet\n", nf, millis() - t0);
+      pass_next = 0;
+      pass_t0 = millis();
     }
+    bool pass_done = false;
+    if (pass_next < nf) {
+      int i = pass_next++;
+      pass_norad[i] = ids[i];
+      has_pass[i] = present[i] && sats[i].passes(qth, now, now + 24 * 3600, 0, &passes[i], 1) == 1;
+      if (pass_next >= nf) {
+        last_pass = now;
+        pass_done = true;
+        Serial.printf("Satelliten: Ueberfluege fuer %d Favoriten in %lu ms berechnet\n", nf, millis() - pass_t0);
+      }
+    }
+
+    // Liste, Bodenspur usw. alle 5 s (bzw. sofort nach Aenderung oder neuen Ueberfluegen)
+    if (now - last_full < 5 && !pass_done && cur_sel == last_sel) continue;
+    last_full = now;
 
     work->n = 0;
     for (int i = 0; i < nf; i++) {
-      Satellite *s = find(ids[i]);
-      if (!s) continue;
+      if (!present[i]) continue;
+      Satellite &s = sats[i];
       SatRow &r = work->rows[work->n++];
       r.norad = ids[i];
-      strncpy(r.name, s->name(), sizeof r.name);
-      r.valid = s->state(now, qth, r.st);
-      r.geo = s->is_geo();
+      strncpy(r.name, s.name(), sizeof r.name);
+      r.valid = s.state(now, qth, r.st);
+      r.geo = s.is_geo();
       r.has_pass = has_pass[i] && pass_norad[i] == ids[i];
       if (r.has_pass) r.pass = passes[i];
     }
 
     // Bodenspur und Ausleuchtzone des ausgewaehlten Satelliten
-    work->sel_norad = sel;
-    Satellite *ss = sel ? find(sel) : nullptr;
-    if (ss && (sel != last_sel || now - last_track >= 30)) {
-      double per = ss->period_min() * 60;
+    work->sel_norad = cur_sel;
+    if (sel_ok && (cur_sel != last_sel || now - last_track >= 30)) {
+      Satellite &ss = sats[SAT_MAX_FAV];
+      double per = ss.period_min() * 60;
       if (per > 6 * 3600) per = 6 * 3600;
       int step = (int)(per / (SAT_TRACK_N - 20));
       if (step < 20) step = 20;
-      work->trk_n = ss->ground_track(now - 10 * step, now + (time_t)per, step, work->trk_lat, work->trk_lon, SAT_TRACK_N);
+      work->trk_n = ss.ground_track(now - 10 * step, now + (time_t)per, step, work->trk_lat, work->trk_lon, SAT_TRACK_N);
       SatState st;
-      if (ss->state(now, qth, st)) Satellite::footprint(st.lat, st.lon, st.alt_km, SAT_FP_N, work->fp_lat, work->fp_lon);
+      if (ss.state(now, qth, st)) Satellite::footprint(st.lat, st.lon, st.alt_km, SAT_FP_N, work->fp_lat, work->fp_lon);
       last_track = now;
-      last_sel = sel;
-    } else if (!ss) {
+      last_sel = cur_sel;
+    } else if (!sel_ok) {
       work->trk_n = 0;
       last_sel = 0;
     }
-    work->tle_time = tle_time;
-    work->tle_count = n_catalog;
-    xSemaphoreGive(mtx);
+    work->tle_time = tle_t;
+    work->tle_count = n_cat;
 
     xSemaphoreTake(view_mtx, portMAX_DELAY);
     *view = *work;
@@ -318,7 +350,5 @@ void sats_begin(double qth_lat, double qth_lon) {
   load_favorites();
   load_cached();
   // Stack im PSRAM: der Task greift nicht auf den Flash zu (spart internen RAM)
-  if (xTaskCreatePinnedToCoreWithCaps(sat_task, "sats", 8192, nullptr, 0, nullptr, 0,
-                                      MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT) != pdPASS)
-    xTaskCreatePinnedToCore(sat_task, "sats", 8192, nullptr, 0, nullptr, 0);
+  task_start_psram(sat_task, "sats", 8192, 0);
 }

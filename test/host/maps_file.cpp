@@ -19,10 +19,10 @@ MapImage maps_image() {
   return {pal, pal + 16, buf.data() + 68};
 }
 
-const uint8_t *maps_borders() {
-  static std::vector<uint8_t> b;
+// Ganze Datei einmalig laden; nullptr, wenn sie fehlt
+static const uint8_t *load_blob(const char *path, std::vector<uint8_t> &b) {
   if (b.empty()) {
-    FILE *f = fopen("assets/borders.bin", "rb");
+    FILE *f = fopen(path, "rb");
     if (!f) return nullptr;
     uint8_t buf[65536];
     size_t n;
@@ -32,28 +32,6 @@ const uint8_t *maps_borders() {
   return b.data();
 }
 
-const uint8_t *maps_zones() {
-  static std::vector<uint8_t> b;
-  if (b.empty()) {
-    FILE *f = fopen("assets/zones.bin", "rb");
-    if (!f) return nullptr;
-    uint8_t buf[65536];
-    size_t n;
-    while ((n = fread(buf, 1, sizeof buf, f)) > 0) b.insert(b.end(), buf, buf + n);
-    fclose(f);
-  }
-  return b.data();
-}
-
-const uint8_t *maps_detail() {
-  static std::vector<uint8_t> b;
-  if (b.empty()) {
-    FILE *f = fopen("assets/detail.bin", "rb");
-    if (!f) return nullptr;
-    uint8_t buf[65536];
-    size_t n;
-    while ((n = fread(buf, 1, sizeof buf, f)) > 0) b.insert(b.end(), buf, buf + n);
-    fclose(f);
-  }
-  return b.data();
-}
+const uint8_t *maps_borders() { static std::vector<uint8_t> b; return load_blob("assets/borders.bin", b); }
+const uint8_t *maps_zones() { static std::vector<uint8_t> b; return load_blob("assets/zones.bin", b); }
+const uint8_t *maps_detail() { static std::vector<uint8_t> b; return load_blob("assets/detail.bin", b); }

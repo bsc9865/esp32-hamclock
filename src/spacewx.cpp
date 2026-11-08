@@ -1,4 +1,5 @@
 #include "spacewx.h"
+#include <atomic>
 #include <Arduino.h>
 #include "net.h"
 #include "config.h"
@@ -7,7 +8,7 @@ static SemaphoreHandle_t mtx;
 static WxData *data;                       // PSRAM
 static uint8_t *aurora[2], *drap[2];       // Doppelpuffer: Abruf schreibt in den inaktiven
 static volatile int aurora_cur = -1, drap_cur = -1;
-static volatile uint32_t seq = 0;
+static std::atomic<uint32_t> seq{0};
 
 uint32_t spacewx_seq() { return seq; }
 

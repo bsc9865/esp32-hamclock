@@ -1,5 +1,7 @@
 // Frequenzen der Favoriten-Satelliten aus der SatNOGS DB (CC BY-SA 4.0)
+#include "psram_alloc.h"
 #include "satfreq.h"
+#include <atomic>
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <LittleFS.h>
@@ -19,16 +21,10 @@ static SatTx *table;                       // PSRAM
 static int n_tx = 0;
 static Fetched fetched[SAT_MAX_FAV * 2];   // wann welcher Satellit geholt wurde
 static int n_fetched = 0;
-static volatile uint32_t seq = 0;
+static std::atomic<uint32_t> seq{0};
 
 uint32_t satfreq_seq() { return seq; }
 
-struct PsramAllocator : ArduinoJson::Allocator {
-  void *allocate(size_t n) override { return heap_caps_malloc(n, MALLOC_CAP_SPIRAM); }
-  void deallocate(void *p) override { heap_caps_free(p); }
-  void *reallocate(void *p, size_t n) override { return heap_caps_realloc(p, n, MALLOC_CAP_SPIRAM); }
-};
-static PsramAllocator psram_alloc;
 
 static void init_once() {
   if (mtx) return;
@@ -94,7 +90,7 @@ static int fetch_one(int norad, SatTx *out) {
   for (const char *k : {"description", "status", "type", "uplink_low", "uplink_high", "downlink_low", "downlink_high",
                         "mode", "invert"})
     f[k] = true;
-  JsonDocument doc(&psram_alloc);
+  JsonDocument doc(psram_allocator());
   DeserializationError err = deserializeJson(doc, body, DeserializationOption::Filter(filter));
   body = String();
   if (err) { Serial.printf("SatNOGS %d: JSON-Fehler %s\n", norad, err.c_str()); return -1; }

@@ -1,4 +1,5 @@
 #include "propdata.h"
+#include <atomic>
 #include <Arduino.h>
 #include "net.h"
 #include "config.h"
@@ -7,7 +8,7 @@ static PropModel *model[2];               // Doppelpuffer (PSRAM)
 static Ionosonde *stations[2];
 static int n_st[2];
 static volatile int cur = -1;
-static volatile uint32_t seq = 0;
+static std::atomic<uint32_t> seq{0};
 static uint8_t *grid;                     // MUF-Raster fuer die Karte
 static time_t grid_t = 0;
 static uint32_t grid_seq = 0xFFFFFFFF;

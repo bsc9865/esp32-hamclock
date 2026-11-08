@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "astro.h"
+#include "json_scan.h"
 #include "timeutil.h"
 
 static constexpr double DEG = M_PI / 180.0;
@@ -12,20 +13,6 @@ const char *const PROP_BAND_NAMES[PROP_BANDS] = {"80", "40", "30", "20", "17", "
 const float PROP_BAND_MHZ[PROP_BANDS] = {3.6f, 7.1f, 10.12f, 14.15f, 18.1f, 21.2f, 24.94f, 28.5f};
 
 // ---------- KC2G-Parser ----------
-static const char *find_key(const char *p, const char *end, const char *key) {
-  size_t kl = strlen(key);
-  for (const char *q = p; q && q < end; q++) {
-    q = strchr(q, '"');
-    if (!q || q >= end) return nullptr;
-    if (strncmp(q + 1, key, kl) == 0 && q[1 + kl] == '"') {
-      const char *v = q + 2 + kl;
-      while (*v == ' ' || *v == ':') v++;
-      return v;
-    }
-  }
-  return nullptr;
-}
-
 static double num(const char *v) {
   if (!v || *v == 'n') return NAN;   // null
   return atof(*v == '"' ? v + 1 : v);
@@ -33,29 +20,19 @@ static double num(const char *v) {
 
 int prop_parse_kc2g(const char *json, time_t now, int max_age_s, Ionosonde *out, int max) {
   int n = 0;
-  const char *p = json;
+  if (max <= 0) return 0;
   // Top-Level-Objekte durchlaufen (enthalten ein verschachteltes "station"-Objekt)
-  while (n < max && (p = strchr(p, '{'))) {
-    const char *e = p + 1;
-    int depth = 1;
-    bool str = false;
-    for (; *e && depth; e++) {
-      if (*e == '\\' && str) { if (e[1]) e++; continue; }
-      if (*e == '"') str = !str;
-      else if (!str && *e == '{') depth++;
-      else if (!str && *e == '}') depth--;
-    }
-    if (depth) break;
+  json_for_each_object(json, [&](const char *p, const char *e) {
     Ionosonde s{};
-    s.mufd = (float)num(find_key(p, e, "mufd"));
-    s.fof2 = (float)num(find_key(p, e, "fof2"));
-    s.cs = (float)num(find_key(p, e, "cs"));
-    s.lat = (float)num(find_key(p, e, "latitude"));
-    float lon = (float)num(find_key(p, e, "longitude"));
+    s.mufd = (float)num(json_find_key(p, e, "mufd"));
+    s.fof2 = (float)num(json_find_key(p, e, "fof2"));
+    s.cs = (float)num(json_find_key(p, e, "cs"));
+    s.lat = (float)num(json_find_key(p, e, "latitude"));
+    float lon = (float)num(json_find_key(p, e, "longitude"));
     s.lon = lon > 180 ? lon - 360 : lon;
-    const char *tv = find_key(p, e, "time");
+    const char *tv = json_find_key(p, e, "time");
     s.t = tv && *tv == '"' ? parse_iso_utc(tv + 1) : 0;
-    const char *nm = find_key(p, e, "name");
+    const char *nm = json_find_key(p, e, "name");
     if (nm && *nm == '"') {
       size_t i = 0;
       for (nm++; *nm && *nm != '"' && i < sizeof s.name - 1; nm++)
@@ -64,9 +41,10 @@ int prop_parse_kc2g(const char *json, time_t now, int max_age_s, Ionosonde *out,
     }
     bool fresh = s.t > 0 && now - s.t <= max_age_s && s.t <= now + 600;
     bool trusted = isnan(s.cs) || s.cs < 0 || s.cs >= 30;
-    if (fresh && trusted && !isnan(s.mufd) && s.mufd > 1 && s.mufd < 60 && !isnan(s.lat)) out[n++] = s;
-    p = e;
-  }
+    if (fresh && trusted && !isnan(s.mufd) && s.mufd > 1 && s.mufd < 60 && fabsf(s.lat) <= 90 && fabsf(s.lon) <= 180)
+      out[n++] = s;
+    return n < max;
+  });
   return n;
 }
 

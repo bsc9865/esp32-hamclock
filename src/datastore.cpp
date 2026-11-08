@@ -1,4 +1,5 @@
 #include "datastore.h"
+#include <atomic>
 #include <Arduino.h>
 #include "net.h"
 #include "config.h"
@@ -12,7 +13,7 @@
 
 static SemaphoreHandle_t mtx;
 static SolarData g_solar;
-static volatile uint32_t g_solar_seq = 0;
+static std::atomic<uint32_t> g_solar_seq{0};
 
 uint32_t solar_seq() { return g_solar_seq; }
 

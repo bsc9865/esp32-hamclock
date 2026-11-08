@@ -1,4 +1,6 @@
 #include "activations.h"
+#include "psram_alloc.h"
+#include <atomic>
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include "net.h"
@@ -12,7 +14,7 @@ static constexpr int MAX_PER_TYPE = 100;
 static SemaphoreHandle_t mtx;
 static Activation *store[ACT_TYPES];     // je Typ ein Feld im PSRAM
 static int count[ACT_TYPES];
-static volatile uint32_t seq = 0;
+static std::atomic<uint32_t> seq{0};
 
 uint32_t act_seq() { return seq; }
 
@@ -64,13 +66,6 @@ static bool valid_pos(const Activation &a) {
   return a.lat >= -90 && a.lat <= 90 && a.lon >= -180 && a.lon <= 180;   // auch NaN faellt heraus
 }
 
-// JSON-Speicher aus dem PSRAM
-struct PsramAllocator : ArduinoJson::Allocator {
-  void *allocate(size_t n) override { return heap_caps_malloc(n, MALLOC_CAP_SPIRAM); }
-  void deallocate(void *p) override { heap_caps_free(p); }
-  void *reallocate(void *p, size_t n) override { return heap_caps_realloc(p, n, MALLOC_CAP_SPIRAM); }
-};
-static PsramAllocator psram_alloc;
 
 static void commit(ActType type, Activation *tmp, int n) {
   xSemaphoreTake(mtx, portMAX_DELAY);
@@ -89,7 +84,7 @@ bool activations_fetch_pota() {
   for (const char *k : {"activator", "frequency", "mode", "reference", "name", "locationDesc",
                         "latitude", "longitude", "spotTime", "comments"})
     f[k] = true;
-  JsonDocument doc(&psram_alloc);
+  JsonDocument doc(psram_allocator());
   DeserializationError err = deserializeJson(doc, body, DeserializationOption::Filter(filter));
   body = String();
   if (err) { Serial.printf("POTA: JSON-Fehler %s\n", err.c_str()); return false; }
@@ -129,7 +124,7 @@ bool activations_fetch_wwff() {
   for (const char *k : {"activator", "frequency_khz", "mode", "reference", "reference_name",
                         "latitude", "longitude", "spot_time", "remarks"})
     f[k] = true;
-  JsonDocument doc(&psram_alloc);
+  JsonDocument doc(psram_allocator());
   DeserializationError err = deserializeJson(doc, body, DeserializationOption::Filter(filter));
   body = String();
   if (err) { Serial.printf("WWFF: JSON-Fehler %s\n", err.c_str()); return false; }

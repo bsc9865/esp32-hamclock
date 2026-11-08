@@ -4,6 +4,11 @@ Alle wichtigen Änderungen an diesem Projekt. Format nach [Keep a Changelog](htt
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unreleased]
+### Geändert
+- Satelliten: Bahnberechnung auf Kopien ohne lange Sperre und je Durchlauf ein Satellit; vorher blockierte die Überflugsberechnung (ca. 17 s) Satellitenauswahl, SatNOGS-Abruf und die Live-Werte der Detailansicht
+- Refactoring: gemeinsamer JSON-Scanner (`json_scan.h`), PSRAM-Allokator (`psram_alloc.h`) und Task-Start mit PSRAM-Stack (`task_util.h`); atomare Zähler statt `volatile` (keine Compiler-Warnungen mehr in den Projektdateien)
+- Statusseite: Kartenebenen (`layers`) in status.json, APRS-Verbindungsaufbau im Log
+
 ### Sicherheit
 - Konfigurationsseite: Schutz gegen Cross-Site-Request-Forgery (Zufallstoken je Start in allen Formularen); vorher konnte eine fremde Webseite im selben Browser Einstellungen ändern, solange die Basic-Auth-Anmeldung gespeichert war
 - Alle HTTPS-Abrufe prüfen jetzt das Server-Zertifikat (Mozilla-Stammzertifikate aus ESP-IDF) statt `setInsecure()`

@@ -1,4 +1,5 @@
 #include "weather.h"
+#include <atomic>
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include "net.h"
@@ -6,7 +7,7 @@
 
 static SemaphoreHandle_t mtx;
 static Weather data;
-static volatile uint32_t seq = 0;
+static std::atomic<uint32_t> seq{0};
 static char url[420];
 
 uint32_t weather_seq() { return seq; }

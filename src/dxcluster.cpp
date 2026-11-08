@@ -1,4 +1,6 @@
+#include "task_util.h"
 #include "dxcluster.h"
+#include <atomic>
 #include <Arduino.h>
 #include <WiFi.h>
 #include <freertos/idf_additions.h>
@@ -9,7 +11,7 @@
 static SemaphoreHandle_t mtx;
 static Spot *spots;               // Ringpuffer im PSRAM
 static int head = 0, count = 0;   // head = Index des neuesten Spots
-static volatile uint32_t seq = 0;
+static std::atomic<uint32_t> seq{0};
 static volatile DxState state = DX_OFF;
 static char server[48];
 
@@ -144,7 +146,5 @@ void dxcluster_begin() {
   mtx = xSemaphoreCreateMutex();
   spots = (Spot *)heap_caps_calloc(DX_MAX_SPOTS, sizeof(Spot), MALLOC_CAP_SPIRAM);
   // Stack im PSRAM (der Task nutzt nur Sockets, keinen Flash) - spart internen RAM
-  if (xTaskCreatePinnedToCoreWithCaps(dx_task, "dxcluster", 6144, nullptr, 1, nullptr, 0,
-                                      MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT) != pdPASS)
-    xTaskCreatePinnedToCore(dx_task, "dxcluster", 6144, nullptr, 1, nullptr, 0);
+  task_start_psram(dx_task, "dxcluster", 6144, 1);
 }

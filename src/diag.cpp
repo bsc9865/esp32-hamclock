@@ -1,4 +1,6 @@
+#include "task_util.h"
 #include "diag.h"
+#include <atomic>
 #include <Arduino.h>
 #include <WebServer.h>
 #include <WiFi.h>
@@ -21,7 +23,7 @@ extern uint32_t worldmap_last_ms;
 // Protokoll gescheiterter Speicheranforderungen (Ringpuffer)
 struct AllocFail { uint32_t ms; uint32_t size; uint32_t caps; char task[12]; };
 static AllocFail fails[8];
-static volatile uint32_t n_fails = 0;
+static std::atomic<uint32_t> n_fails{0};
 
 static void IRAM_ATTR alloc_failed(size_t size, uint32_t caps, const char *func) {
   (void)func;
@@ -38,11 +40,11 @@ static void IRAM_ATTR alloc_failed(size_t size, uint32_t caps, const char *func)
 // PSRAM-Tiefststaende mit Zeitpunkt und laufendem Abruf (Diagnose)
 struct PsramLow { uint32_t ms; uint32_t free_b; char job[24]; };
 static PsramLow lows[8];
-static volatile uint32_t n_lows = 0;
+static std::atomic<uint32_t> n_lows{0};
 static uint32_t psram_min_seen = 0xFFFFFFFF;
 // interner RAM: Tiefststand seit setup() mit laufendem Abruf
 static PsramLow ilows[8];
-static volatile uint32_t n_ilows = 0;
+static std::atomic<uint32_t> n_ilows{0};
 static uint32_t int_min_seen = 0xFFFFFFFF;
 
 static void psram_monitor(void *) {
@@ -74,7 +76,7 @@ static void psram_monitor(void *) {
 void diag_begin() {
   reason = esp_reset_reason();
   heap_caps_register_failed_alloc_callback(alloc_failed);
-  xTaskCreatePinnedToCoreWithCaps(psram_monitor, "psmon", 2048, nullptr, 2, nullptr, 0, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+  task_start_psram(psram_monitor, "psmon", 2048, 2);
 }
 
 const char *diag_reset_reason() {
@@ -122,7 +124,7 @@ static String status_json() {
   j += ",\"psram_min\":" + String(psram_min_seen);   // seit setup() (der Heap-Wert enthaelt den Systemstart)
   j += ",\"rssi\":" + String(WiFi.RSSI());
   j += ",\"dx_state\":" + String((int)dxcluster_state());
-  j += ",\"aprs_online\":" + String(aprs_online() ? "true" : "false");
+  j += ",\"aprs_online\":" + String(aprs_online() ? "true" : "false") + ",\"layers\":" + String(g_settings.layers);
   j += ",\"update\":\"" + String(ota_latest_version()) + "\"";
   j += ",\"map_render\":{\"zoom\":" + String(mapscreen_last_zoom, 1) + ",\"fast_ms\":" + String(mapscreen_last_fast_ms) +
        ",\"smooth_ms\":" + String(mapscreen_last_smooth_ms) + ",\"small_ms\":" + String(worldmap_last_ms) + "}";
@@ -257,7 +259,5 @@ static void web_task(void *) {
 }
 
 void web_begin() {
-  if (xTaskCreatePinnedToCoreWithCaps(web_task, "web", 6144, nullptr, 1, nullptr, 0,
-                                      MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT) != pdPASS)
-    xTaskCreatePinnedToCore(web_task, "web", 6144, nullptr, 1, nullptr, 0);
+  task_start_psram(web_task, "web", 6144, 1);
 }

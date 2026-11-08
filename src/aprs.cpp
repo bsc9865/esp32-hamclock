@@ -1,4 +1,6 @@
+#include "task_util.h"
 #include "aprs.h"
+#include <atomic>
 #include <Arduino.h>
 #include <WiFi.h>
 #include <freertos/idf_additions.h>
@@ -9,7 +11,7 @@
 static SemaphoreHandle_t mtx;
 static AprsStation *st;            // PSRAM
 static int n_st = 0;
-static volatile uint32_t seq = 0;
+static std::atomic<uint32_t> seq{0};
 static volatile bool online = false;
 static double qlat, qlon;
 
@@ -44,6 +46,7 @@ int aprs_snapshot(AprsStation *out, int max) {
 
 static void session() {
   WiFiClient c;
+  Serial.printf("APRS-IS: verbinde %s:%d\n", APRS_SERVER, APRS_PORT);
   if (!c.connect(APRS_SERVER, APRS_PORT, 10000)) {
     Serial.println("APRS-IS: Verbindung fehlgeschlagen");
     return;
@@ -102,7 +105,5 @@ void aprs_begin(double lat, double lon) {
   qlon = lon;
   mtx = xSemaphoreCreateMutex();
   st = (AprsStation *)heap_caps_calloc(APRS_MAX_STATIONS, sizeof(AprsStation), MALLOC_CAP_SPIRAM);
-  if (xTaskCreatePinnedToCoreWithCaps(aprs_task, "aprs", 5120, nullptr, 1, nullptr, 0,
-                                      MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT) != pdPASS)
-    xTaskCreatePinnedToCore(aprs_task, "aprs", 5120, nullptr, 1, nullptr, 0);
+  task_start_psram(aprs_task, "aprs", 5120, 1);
 }
