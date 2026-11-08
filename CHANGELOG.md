@@ -4,6 +4,13 @@ Alle wichtigen Änderungen an diesem Projekt. Format nach [Keep a Changelog](htt
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unreleased]
+### Sicherheit
+- Konfigurationsseite: Schutz gegen Cross-Site-Request-Forgery (Zufallstoken je Start in allen Formularen); vorher konnte eine fremde Webseite im selben Browser Einstellungen ändern, solange die Basic-Auth-Anmeldung gespeichert war
+- Alle HTTPS-Abrufe prüfen jetzt das Server-Zertifikat (Mozilla-Stammzertifikate aus ESP-IDF) statt `setInsecure()`
+- Firmware-Update installiert nur Release-Dateien dieses Repositorys
+- Rufzeichen und DX-Cluster-Adresse werden auf gültige Zeichen geprüft (keine Steuerzeichen in Telnet-/APRS-Anmeldungen)
+- Robustheit gegen fehlerhafte Daten: POTA/WWFF-Koordinaten werden geprüft, Pixelkoordinaten begrenzt, D-RAP-Werte nach unten begrenzt
+- Übergabe der Web-Einstellungen an die Hauptschleife abgesichert; SatNOGS-Zwischenspeicher wird beim Start geladen (keine Initialisierung aus zwei Tasks)
 ### Behoben
 - Ausbreitung: Wenn KC2G/GIRO stockt (weniger als 3 Ionosonden mit Messwerten der letzten 2 h), werden Messwerte bis 8 h verwendet und gelb als veraltet gekennzeichnet, statt gar nichts anzuzeigen
 

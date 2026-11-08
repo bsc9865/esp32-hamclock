@@ -9,6 +9,19 @@
 #include "cty.h"
 
 static WebServer *srv;
+static char csrf[17];   // Zufallstoken je Start: Formulare fremder Seiten koennen es nicht kennen
+
+static String token_field() { return String("<input type=hidden name=t value=") + csrf + ">"; }
+
+// POST nur mit gueltigem Token (Schutz gegen Cross-Site-Request-Forgery: der Browser schickt
+// gespeicherte Basic-Auth-Daten sonst auch bei Formularen fremder Webseiten mit)
+static bool token_ok() {
+  if (srv->arg("t") == csrf) return true;
+  srv->send(403, "text/html; charset=utf-8",
+            "<!doctype html><meta charset=utf-8><body style='font-family:system-ui;background:#0a0e14;color:#e6edf3;margin:16px'>"
+            "<h2>Abgelehnt</h2><p>Die Seite ist veraltet (Ger&auml;t neu gestartet?). Bitte <a style='color:#38bdf8' href=/config>neu laden</a>.</p>");
+  return false;
+}
 
 static String esc(const char *s) {
   String o;
@@ -77,11 +90,11 @@ static String spots_table() {
     h += hit ? "<tr class=hit>" : "<tr>";
     h += "<td>" + String(t) + "</td><td>" + f + "</td><td><b>" + esc(x.dx) + "</b></td><td>" +
          (ent ? esc(ent->name) : String("?")) + "</td><td>" + esc(x.mode) + "</td><td class=hint>" + esc(x.spotter) + "</td><td>";
-    h += "<form method=post action=/watch class=inl><input type=hidden name=e value=\"" + esc(x.dx) +
+    h += "<form method=post action=/watch class=inl>" + token_field() + "<input type=hidden name=e value=\"" + esc(x.dx) +
          "\"><button class=sm>+ Ruf</button></form>";
     if (ent)
-      h += "<form method=post action=/watch class=inl><input type=hidden name=e value=\"@" + esc(ent->prefix) +
-           "\"><button class=sm title=\"" + esc(ent->name) + "\">+ Land</button></form>";
+      h += "<form method=post action=/watch class=inl>" + token_field() + "<input type=hidden name=e value=\"@" +
+           esc(ent->prefix) + "\"><button class=sm title=\"" + esc(ent->name) + "\">+ Land</button></form>";
     h += "</td></tr>";
   }
   h += F("</table><p class=hint>Neueste zuerst, alle B&auml;nder und Modes. Watchlist-Treffer sind hervorgehoben.</p></fieldset>");
@@ -115,6 +128,7 @@ static void page(const char *msg = nullptr, bool ok = true) {
   if (!s.ota_pw[0])
     h += F("<div class='msg bad'>Diese Seite ist nicht gesch&uuml;tzt. Setze ein OTA-Passwort, dann wird es als Kennwort verlangt (Benutzer &bdquo;admin&ldquo;).</div>");
   h += F("<form method=post action=/config>");
+  h += token_field();
 
   h += F("<fieldset><legend>DX-Watchlist</legend><textarea name=watch>");
   h += esc(s.watch);
@@ -179,11 +193,11 @@ static void handle_post() {
   call.trim();
   call.toUpperCase();
   char loc[7];
-  if (call.length() < 3) return page("Rufzeichen ung&uuml;ltig", false);
+  if (!settings_valid_call(call.c_str())) return page("Rufzeichen ung&uuml;ltig (A-Z, 0-9, /)", false);
   if (!settings_normalize_locator(srv->arg("loc").c_str(), loc)) return page("Locator ung&uuml;ltig (z.B. JO50uh)", false);
   String cl = srv->arg("cluster");
   cl.trim();
-  if (!cl.length() || cl.indexOf('.') < 0) return page("DX-Cluster ung&uuml;ltig (host:port)", false);
+  if (!settings_valid_cluster(cl.c_str())) return page("DX-Cluster ung&uuml;ltig (host:port)", false);
   if (!srv->arg("ssid").length()) return page("WLAN-Name fehlt", false);
 
   // Uebernehmen
@@ -237,7 +251,8 @@ static void handle_watch_add() {
 
 void webconfig_register(WebServer &server) {
   srv = &server;
-  server.on("/watch", HTTP_POST, [] { if (authorized()) handle_watch_add(); });
+  snprintf(csrf, sizeof csrf, "%08lx%08lx", (unsigned long)esp_random(), (unsigned long)esp_random());
+  server.on("/watch", HTTP_POST, [] { if (authorized() && token_ok()) handle_watch_add(); });
   server.on("/config", HTTP_GET, [] { if (authorized()) page(); });
-  server.on("/config", HTTP_POST, [] { if (authorized()) handle_post(); });
+  server.on("/config", HTTP_POST, [] { if (authorized() && token_ok()) handle_post(); });
 }

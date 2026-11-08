@@ -154,7 +154,11 @@ static void on_save(lv_event_t *) {
   const char *ssid = lv_textarea_get_text(ta_ssid);
   const char *call = lv_textarea_get_text(ta_call);
   if (!*ssid) { status("WLAN-Netz fehlt", C_POOR); return; }
-  if (strlen(call) < 3) { status("Rufzeichen ungueltig", C_POOR); return; }
+  char up[sizeof s.call];
+  size_t i = 0;
+  for (; call[i] && i < sizeof up - 1; i++) up[i] = toupper((unsigned char)call[i]);
+  up[i] = 0;
+  if (call[i] || !settings_valid_call(up)) { status("Rufzeichen ungueltig (A-Z, 0-9, /)", C_POOR); return; }
   char loc[7];
   if (!settings_normalize_locator(lv_textarea_get_text(ta_loc), loc)) {
     status("Locator ungueltig (z.B. JO50uh)", C_POOR);
@@ -162,12 +166,10 @@ static void on_save(lv_event_t *) {
   }
   strncpy(s.ssid, ssid, sizeof s.ssid - 1);
   strncpy(s.pass, lv_textarea_get_text(ta_pass), sizeof s.pass - 1);
-  size_t i = 0;
-  for (; call[i] && i < sizeof s.call - 1; i++) s.call[i] = toupper(call[i]);
-  s.call[i] = 0;
+  strcpy(s.call, up);
   strcpy(s.loc, loc);
   const char *cl = lv_textarea_get_text(ta_cluster);
-  if (!*cl || !strchr(cl, '.')) { status("DX-Cluster ungueltig (host:port)", C_POOR); return; }
+  if (!settings_valid_cluster(cl)) { status("DX-Cluster ungueltig (host:port)", C_POOR); return; }
   strncpy(s.cluster, cl, sizeof s.cluster - 1);
   s.cluster[sizeof s.cluster - 1] = 0;
   strncpy(s.ota_pw, lv_textarea_get_text(ta_otapw), sizeof s.ota_pw - 1);

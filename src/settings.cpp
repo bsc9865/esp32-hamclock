@@ -24,6 +24,31 @@ static String get_str(Preferences &p, const char *key, const char *def) {
   return p.isKey(key) ? p.getString(key, def) : String(def);
 }
 
+bool settings_valid_call(const char *call) {
+  size_t n = strlen(call);
+  if (n < 3 || n > 12) return false;
+  for (size_t i = 0; i < n; i++) {
+    char c = call[i];
+    if (!(isupper((unsigned char)c) || isdigit((unsigned char)c) || c == '/' || c == '-')) return false;
+  }
+  return true;
+}
+
+bool settings_valid_cluster(const char *cl) {
+  const char *colon = strrchr(cl, ':');
+  size_t hl = colon ? (size_t)(colon - cl) : strlen(cl);
+  if (hl < 3 || hl > 46 || !memchr(cl, '.', hl)) return false;
+  for (size_t i = 0; i < hl; i++) {
+    char c = cl[i];
+    if (!(isalnum((unsigned char)c) || c == '.' || c == '-')) return false;
+  }
+  if (!colon) return true;
+  if (!colon[1]) return false;
+  for (const char *p = colon + 1; *p; p++) if (!isdigit((unsigned char)*p)) return false;
+  long port = atol(colon + 1);
+  return port >= 1 && port <= 65535;
+}
+
 bool settings_normalize_locator(const char *in, char out[7]) {
   size_t n = strlen(in);
   if (n != 4 && n != 6) return false;
@@ -144,24 +169,32 @@ bool settings_cluster_hostport(char *host, size_t n, uint16_t &port) {
 
 // ---------- Uebernahme aus anderen Tasks ----------
 static Settings pending;
-static volatile bool pending_set = false, pending_restart = false;
+static bool pending_set = false, pending_restart = false;
 static volatile uint32_t applied_seq = 0;
+static portMUX_TYPE pending_mux = portMUX_INITIALIZER_UNLOCKED;   // schuetzt pending*
 
 void settings_request(const Settings &s, bool restart) {
+  taskENTER_CRITICAL(&pending_mux);
   pending = s;
-  pending_restart = restart;
+  pending_restart = pending_restart || restart;
   pending_set = true;
+  taskEXIT_CRITICAL(&pending_mux);
 }
 
 uint32_t settings_seq() { return applied_seq; }
 
 void settings_apply_pending() {
-  if (!pending_set) return;
-  pending_set = false;
-  settings_save(pending);
-  applied_seq++;
+  static Settings s;
+  bool restart;
+  taskENTER_CRITICAL(&pending_mux);
+  bool have = pending_set;
+  if (have) { s = pending; restart = pending_restart; pending_set = pending_restart = false; }
+  taskEXIT_CRITICAL(&pending_mux);
+  if (!have) return;
+  settings_save(s);
+  applied_seq = applied_seq + 1;
   Serial.println("Einstellungen: uebernommen (Web)");
-  if (pending_restart) {
+  if (restart) {
     delay(800);   // Antwortseite noch ausliefern lassen
     ESP.restart();
   }

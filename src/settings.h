@@ -40,5 +40,10 @@ uint32_t settings_seq();          // aendert sich bei jeder Uebernahme
 // Zerlegt "host:port" (Standard-Port 7300)
 bool settings_cluster_hostport(char *host, size_t n, uint16_t &port);
 
+// Rufzeichen: 3..12 Zeichen aus A-Z, 0-9, '/', '-' (verhindert Steuerzeichen in Telnet-/APRS-Anmeldungen)
+bool settings_valid_call(const char *call);
+// DX-Cluster "host[:port]": Hostname aus A-Z, a-z, 0-9, '.', '-', Port 1..65535
+bool settings_valid_cluster(const char *cluster);
+
 // Normalisiert und prueft einen Locator (z.B. "jo50UH" -> "JO50uh").
 bool settings_normalize_locator(const char *in, char out[7]);

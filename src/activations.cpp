@@ -60,6 +60,10 @@ static void cpy(char *dst, size_t n, const char *src) {
   utf8_to_ascii(src, dst, n);
 }
 
+static bool valid_pos(const Activation &a) {
+  return a.lat >= -90 && a.lat <= 90 && a.lon >= -180 && a.lon <= 180;   // auch NaN faellt heraus
+}
+
 // JSON-Speicher aus dem PSRAM
 struct PsramAllocator : ArduinoJson::Allocator {
   void *allocate(size_t n) override { return heap_caps_malloc(n, MALLOC_CAP_SPIRAM); }
@@ -107,7 +111,7 @@ bool activations_fetch_pota() {
     a.t = parse_iso_utc(o["spotTime"]);
     cpy(a.comment, sizeof a.comment, o["comments"]);
     a.band = band_from_khz(a.khz);
-    if (a.call[0] && a.khz > 0) n++;
+    if (a.call[0] && a.khz > 0 && valid_pos(a)) n++;
   }
   // neueste zuerst
   std::sort(tmp, tmp + n, [](const Activation &x, const Activation &y) { return x.t > y.t; });
@@ -147,7 +151,7 @@ bool activations_fetch_wwff() {
     a.t = (time_t)(o["spot_time"] | 0LL);
     cpy(a.comment, sizeof a.comment, o["remarks"]);
     a.band = band_from_khz(a.khz);
-    if (a.call[0] && a.khz > 0) n++;
+    if (a.call[0] && a.khz > 0 && valid_pos(a)) n++;
   }
   std::sort(tmp, tmp + n, [](const Activation &x, const Activation &y) { return x.t > y.t; });
   commit(ACT_WWFF, tmp, n);

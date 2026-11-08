@@ -9,6 +9,7 @@
 #include "settings.h"
 #include "dxcluster.h"
 #include "sats.h"
+#include "satfreq.h"
 #include "astro.h"
 #include "ota.h"
 #include "weather.h"
@@ -30,6 +31,7 @@ void setup() {
   LatLon q;
   maidenhead_to_latlon(g_settings.loc, q);
   sats_begin(q.lat, q.lon);
+  satfreq_begin();
   weather_begin(q.lat, q.lon);
   aprs_begin(q.lat, q.lon);
   web_begin();

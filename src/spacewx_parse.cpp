@@ -205,7 +205,7 @@ bool wx_parse_drap(const char *text, uint8_t *grid) {
           double v = strtod(p, &end);
           if (end == p || (nl && end > nl)) break;
           int q = (int)lround(v * 5);
-          grid[row * DRAP_W + col] = (uint8_t)(q > 255 ? 255 : q);
+          grid[row * DRAP_W + col] = (uint8_t)(q > 255 ? 255 : (q < 0 ? 0 : q));
           p = end;
         }
         rows++;

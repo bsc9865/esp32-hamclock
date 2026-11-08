@@ -138,9 +138,13 @@ static void line(int x0, int y0, int x1, int y1, uint16_t c, uint32_t w) {
   }
 }
 
+// Pixel fuer eine Geo-Position; begrenzt, damit fehlerhafte Daten (NaN, riesige Werte) weder
+// undefinierte Umwandlungen noch endlos lange Linien erzeugen
 static void to_px(double lat, double lon, int &x, int &y) {
   double fx, fy;
   map_view_to_xy(V, lat, lon, fx, fy);
+  if (!(fx > -20000)) fx = -20000; else if (fx > 20000) fx = 20000;   // auch NaN -> -20000
+  if (!(fy > -20000)) fy = -20000; else if (fy > 20000) fy = 20000;
   x = (int)floor(fx);
   y = (int)floor(fy);
 }

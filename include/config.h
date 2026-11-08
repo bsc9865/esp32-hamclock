@@ -58,6 +58,7 @@
 // Firmware-Updates aus den GitHub-Releases
 #define URL_GITHUB_LATEST  "https://api.github.com/repos/bsc9865/esp32-hamclock/releases/latest"
 #define OTA_ASSET_NAME     "esp32-hamclock-app.bin"
+#define OTA_ASSET_PREFIX   "https://github.com/bsc9865/esp32-hamclock/releases/download/"
 
 #ifndef FW_VERSION
 #define FW_VERSION "dev"

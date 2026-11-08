@@ -20,7 +20,6 @@ static int n_tx = 0;
 static Fetched fetched[SAT_MAX_FAV * 2];   // wann welcher Satellit geholt wurde
 static int n_fetched = 0;
 static volatile uint32_t seq = 0;
-static bool loaded = false;
 
 uint32_t satfreq_seq() { return seq; }
 
@@ -37,8 +36,15 @@ static void init_once() {
   table = (SatTx *)heap_caps_calloc(MAX_TX, sizeof(SatTx), MALLOC_CAP_SPIRAM);
 }
 
-int satfreq_get(int norad, SatTx *out, int max) {
+static void load_cache();
+
+void satfreq_begin() {
   init_once();
+  load_cache();
+}
+
+int satfreq_get(int norad, SatTx *out, int max) {
+  if (!mtx) return 0;
   int k = 0;
   xSemaphoreTake(mtx, portMAX_DELAY);
   for (int i = 0; i < n_tx && k < max; i++)
@@ -59,7 +65,6 @@ static void save_cache() {
 }
 
 static void load_cache() {
-  loaded = true;
   if (!LittleFS.exists(CACHE_FILE)) return;
   File f = LittleFS.open(CACHE_FILE, "r");
   uint32_t hdr[3];
@@ -124,8 +129,7 @@ static int fetch_one(int norad, SatTx *out) {
 }
 
 bool satfreq_fetch() {
-  init_once();
-  if (!loaded) load_cache();
+  if (!mtx) return false;
   int fav[SAT_MAX_FAV];
   int nf = sats_favorites(fav, SAT_MAX_FAV);
   time_t now = time(nullptr);

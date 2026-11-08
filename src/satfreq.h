@@ -17,6 +17,7 @@ struct SatTx {
 
 static constexpr int SATFREQ_PER_SAT = 8;
 
+void satfreq_begin();                                  // beim Start (nach sats_begin, LittleFS)
 bool satfreq_fetch();                                  // Abruf-Job (holt nur, was fehlt oder aelter als 24 h ist)
 int satfreq_get(int norad, SatTx *out, int max);       // Frequenzen eines Satelliten
 uint32_t satfreq_seq();

@@ -54,14 +54,18 @@ int net_rssi() { return WiFi.RSSI(); }
 
 bool time_valid() { return time(nullptr) > 1700000000; }
 
-bool http_get(const char *url, String &out) {
-  if (!net_connected()) return false;
-  WiFiClientSecure secure;
-  WiFiClient plain;
-  HTTPClient http;
-  bool https = strncmp(url, "https", 5) == 0;
-  if (https) {
-    secure.setInsecure();  // keine Zertifikatspruefung (oeffentliche Daten)
+// ESP-IDF-Zertifikatsbuendel (Mozilla-Stammzertifikate), in libmbedtls enthalten
+extern const uint8_t crt_bundle_start[] asm("_binary_x509_crt_bundle_start");
+extern const uint8_t crt_bundle_end[] asm("_binary_x509_crt_bundle_end");
+
+void net_secure_client(WiFiClientSecure &c) {
+  c.setCACertBundle(crt_bundle_start, crt_bundle_end - crt_bundle_start);   // Server-Zertifikat pruefen
+}
+
+// GET vorbereiten und ausfuehren; true bei HTTP 200
+static bool http_open(HTTPClient &http, WiFiClientSecure &secure, WiFiClient &plain, const char *url) {
+  if (strncmp(url, "https", 5) == 0) {
+    net_secure_client(secure);
     http.begin(secure, url);
   } else {
     http.begin(plain, url);
@@ -70,11 +74,21 @@ bool http_get(const char *url, String &out) {
   http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
   http.setUserAgent("ESP32-HamClock/" FW_VERSION);
   int code = http.GET();
-  bool ok = code == HTTP_CODE_OK;
-  if (ok) out = http.getString();
-  else Serial.printf("HTTP %d fuer %s\n", code, url);
+  if (code == HTTP_CODE_OK) return true;
+  Serial.printf("HTTP %d fuer %s\n", code, url);
   http.end();
-  return ok;
+  return false;
+}
+
+bool http_get(const char *url, String &out) {
+  if (!net_connected()) return false;
+  WiFiClientSecure secure;
+  WiFiClient plain;
+  HTTPClient http;
+  if (!http_open(http, secure, plain, url)) return false;
+  out = http.getString();
+  http.end();
+  return true;
 }
 
 bool http_stream(const char *url, http_chunk_cb cb, void *ctx) {
@@ -82,21 +96,7 @@ bool http_stream(const char *url, http_chunk_cb cb, void *ctx) {
   WiFiClientSecure secure;
   WiFiClient plain;
   HTTPClient http;
-  if (strncmp(url, "https", 5) == 0) {
-    secure.setInsecure();
-    http.begin(secure, url);
-  } else {
-    http.begin(plain, url);
-  }
-  http.setTimeout(15000);
-  http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
-  http.setUserAgent("ESP32-HamClock/" FW_VERSION);
-  int code = http.GET();
-  if (code != HTTP_CODE_OK) {
-    Serial.printf("HTTP %d fuer %s\n", code, url);
-    http.end();
-    return false;
-  }
+  if (!http_open(http, secure, plain, url)) return false;
   int remaining = http.getSize();   // -1 bei chunked
   WiFiClient *s = http.getStreamPtr();
   static char buf[1460];

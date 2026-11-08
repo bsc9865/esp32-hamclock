@@ -12,10 +12,6 @@
 #include "settings.h"
 #include "ui_theme.h"
 
-// ESP-IDF-Zertifikatsbuendel (Mozilla-Stammzertifikate), in libmbedtls enthalten
-extern const uint8_t crt_bundle_start[] asm("_binary_x509_crt_bundle_start");
-extern const uint8_t crt_bundle_end[] asm("_binary_x509_crt_bundle_end");
-
 static char latest[24] = "";
 static char asset_url[200] = "";
 static bool ota_started = false;
@@ -145,8 +141,13 @@ void ota_loop() {
 
 // ---------- GitHub-Releases ----------
 static void secure_client(WiFiClientSecure &c) {
-  c.setCACertBundle(crt_bundle_start, crt_bundle_end - crt_bundle_start);
+  net_secure_client(c);
   c.setTimeout(20);
+}
+
+// Nur Release-Dateien dieses Repositorys installieren (GitHub leitet danach auf seinen CDN um)
+static bool trusted_asset(const char *url) {
+  return strncmp(url, OTA_ASSET_PREFIX, strlen(OTA_ASSET_PREFIX)) == 0;
 }
 
 bool ota_check_github() {
@@ -176,6 +177,11 @@ bool ota_check_github() {
   for (JsonObject a : doc["assets"].as<JsonArray>())
     if (strcmp(a["name"] | "", OTA_ASSET_NAME) == 0) strncpy(asset_url, a["browser_download_url"] | "", sizeof asset_url - 1);
   if (!*tag || !asset_url[0]) return false;
+  if (!trusted_asset(asset_url)) {
+    Serial.printf("Update-Pruefung: unerwartete Download-Adresse %s\n", asset_url);
+    asset_url[0] = 0;
+    return false;
+  }
   strncpy(latest, tag, sizeof latest - 1);
   Serial.printf("Update-Pruefung: neueste Version %s, laufend %s%s\n", latest, FW_VERSION,
                 ota_update_available() ? "  -> Update verfuegbar" : "");
